@@ -4,6 +4,7 @@ use std::clone::Clone;
 use std::fmt::Debug;
 use std::io::BufRead;
 use std::io::BufWriter;
+use std::io::Write;
 use std::marker::PhantomData;
 use std::path::Path;
 
@@ -57,10 +58,12 @@ where
         let mut reader = quick_xml::Reader::from_reader(bytes);
         let xmpmeta: Element = Element::from_reader(&mut reader)?;
         let rdf = xmpmeta
-            .get_child("RDF", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+            // .get_child("RDF", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+            .get_child("RDF", minidom::NSChoice::Any)
             .unrwrap_or_err(|| XmpErrorKind::ChildNotFound)?;
         let description = rdf
-            .get_child("Description", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+            // .get_child("Description", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+            .get_child("Description", minidom::NSChoice::Any)
             .unrwrap_or_err(|| XmpErrorKind::ChildNotFound)?;
 
         let mut results_builder = ResultsBuilder::default();
@@ -80,7 +83,6 @@ where
             }
             ("exif:DateTimeOriginal", v) => {
                 let datetime = chrono::DateTime::parse_from_rfc3339(v)
-                    // .datetime_from_str(v, "%Y-%m-%d %H:%M:%S")
                     .map(|d| d.timestamp())
                     .unwrap_or(0);
                 results_builder.datetime(datetime);
@@ -101,10 +103,10 @@ pub struct UpdateResults<T: Image> {
 
 impl UpdateResults<Raw> {
     pub fn update(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
-        let xml = self.update_xml(std::fs::read_to_string(path)?)?;
-
+        let xml = self.update_xml(std::fs::read_to_string(&path)?)?;
         let mut f = std::fs::File::create(path)?;
         let mut bf = BufWriter::new(&mut f);
+        bf.write_all(xml.as_bytes())?;
 
         Ok(())
     }
@@ -114,13 +116,15 @@ impl<T> UpdateResults<T>
 where
     T: Image,
 {
-    pub fn update_xml(self, xml: String) -> Result<String, XmpError> {
+    pub fn update_xml(&self, xml: String) -> Result<String, XmpError> {
         let mut xmpmeta: Element = xml.parse()?;
         let rdf = xmpmeta
-            .get_child_mut("RDF", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+            // .get_child_mut("RDF", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+            .get_child_mut("RDF", minidom::NSChoice::Any)
             .unrwrap_or_err(|| XmpErrorKind::ChildNotFound)?;
         let description = rdf
-            .get_child_mut("Description", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+            // .get_child_mut("Description", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+            .get_child_mut("Description", minidom::NSChoice::Any)
             .unrwrap_or_err(|| XmpErrorKind::ChildNotFound)?;
 
         if let Some(stars) = self.stars {
@@ -147,7 +151,7 @@ where
 
 #[test]
 pub fn xmp_file() {
-    println!("{:?}", Results::load("file.xmp").unwrap());
+    println!("{:?}", Results::<Raw>::load("assets/file.xmp").unwrap());
 }
 
 #[test]
@@ -156,6 +160,6 @@ pub fn set_xmp() {
         colors: Some(String::from("Blue")),
         ..Default::default()
     };
-    UpdateResults::update(&x, "f.xmp").unwrap();
-    println!("{:?}", Results::load("f.xmp").unwrap());
+    UpdateResults::<Raw>::update(&x, "assets/f.xmp").unwrap();
+    println!("{:?}", Results::<Raw>::load("assets/f.xmp").unwrap());
 }

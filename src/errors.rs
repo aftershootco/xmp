@@ -10,6 +10,8 @@ pub struct XmpError {
 pub enum XmpErrorKind {
     #[error("Child element not found")]
     ChildNotFound,
+    #[error("XMP header / File missing")]
+    XMPMissing,
     #[error("{0}")]
     MinidomError(#[from] minidom::Error),
     #[error("{0}")]
@@ -26,6 +28,12 @@ pub enum XmpErrorKind {
     InvalidFileType,
     #[error("{0}")]
     Utf8Error(#[from] std::string::FromUtf8Error),
+    #[cfg(feature = "jpeg")]
+    #[error("{0}")]
+    ImgParts(#[from] img_parts::Error),
+    #[cfg(feature = "jpeg")]
+    #[error("{0}")]
+    ExifError(#[from] exif::Error),
 }
 
 impl std::fmt::Display for XmpError {
