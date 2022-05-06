@@ -12,8 +12,13 @@ extern crate derive_builder;
 
 #[cfg(feature = "jpeg")]
 mod jpg;
+#[cfg(feature = "jpeg")]
+pub use jpg::*;
+
 #[cfg(feature = "raw")]
 mod raw;
+#[cfg(feature = "raw")]
+pub use raw::*;
 
 const DEFAULT_XML: &str = include_str!("default.xmp");
 
