@@ -2,7 +2,7 @@ use std::panic::Location;
 
 #[derive(Debug)]
 pub struct XmpError {
-    inner: Box<dyn std::error::Error>,
+    inner: XmpErrorKind,
     location: Location<'static>,
 }
 
@@ -58,7 +58,7 @@ where
     #[track_caller]
     fn from(e: T) -> Self {
         Self {
-            inner: Box::new(e),
+            inner: e.into(),
             location: *Location::caller(),
         }
     }
