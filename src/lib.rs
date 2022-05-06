@@ -1,7 +1,6 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use minidom::Element;
 use std::clone::Clone;
-use std::fmt::Debug;
 use std::io::BufRead;
 use std::io::BufWriter;
 use std::io::Write;
@@ -13,22 +12,16 @@ extern crate derive_builder;
 
 #[cfg(feature = "jpeg")]
 mod jpg;
+#[cfg(feature = "raw")]
+mod raw;
+
+const DEFAULT_XML: &str = include_str!("default.xmp");
 
 pub mod errors;
 use errors::{XmpError, XmpErrorKind};
 
 mod traits;
 use traits::*;
-
-pub trait Image: Debug + Clone {}
-
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Jpeg;
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Raw;
-
-impl Image for Jpeg {}
-impl Image for Raw {}
 
 #[derive(Debug, Builder, Default)]
 pub struct Results<T: Image> {
@@ -39,13 +32,6 @@ pub struct Results<T: Image> {
 }
 
 // impl ImageType {}
-
-impl Results<Raw> {
-    pub fn load(path: impl AsRef<Path>) -> Result<Self, XmpError> {
-        let str = std::fs::read_to_string(path)?;
-        Self::from_slice(str.as_bytes())
-    }
-}
 
 impl<T> Results<T>
 where
@@ -101,17 +87,6 @@ pub struct UpdateResults<T: Image> {
     __marker: PhantomData<T>,
 }
 
-impl UpdateResults<Raw> {
-    pub fn update(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
-        let xml = self.update_xml(std::fs::read_to_string(&path)?)?;
-        let mut f = std::fs::File::create(path)?;
-        let mut bf = BufWriter::new(&mut f);
-        bf.write_all(xml.as_bytes())?;
-
-        Ok(())
-    }
-}
-
 impl<T> UpdateResults<T>
 where
     T: Image,
@@ -147,19 +122,4 @@ where
         xmpmeta.write_to(&mut xml)?;
         Ok(String::from_utf8(xml)?)
     }
-}
-
-#[test]
-pub fn xmp_file() {
-    println!("{:?}", Results::<Raw>::load("assets/file.xmp").unwrap());
-}
-
-#[test]
-pub fn set_xmp() {
-    let x = UpdateResults {
-        colors: Some(String::from("Blue")),
-        ..Default::default()
-    };
-    UpdateResults::<Raw>::update(&x, "assets/f.xmp").unwrap();
-    println!("{:?}", Results::<Raw>::load("assets/f.xmp").unwrap());
 }

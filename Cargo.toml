@@ -13,8 +13,9 @@ jfifdump = { git = "https://github.com/aftershootco/jfifdump" , optional = true 
 kamadak-exif = { version = "0.5.4", optional = true }
 minidom = "0.14.0"
 quick-xml = "0.22.0"
-simdutf8 = "0.1.4"
 thiserror = "1.0.31"
 
 [features]
 jpeg = ["dep:jfifdump", "dep:kamadak-exif", "dep:img-parts"]
+raw = []
+default = ["jpeg", "raw"]

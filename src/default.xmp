@@ -1,0 +1,18 @@
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+    <rdf:RDF
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:lr="http://ns.adobe.com/lightroom/1.0/"
+    xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+    xmlns:dc="http://purl.org/dc/elements/1.1/">
+        <rdf:Description>
+            <dc:subject>
+                <rdf:Bag>
+                </rdf:Bag>
+            </dc:subject>
+            <lr:hierarchicalSubject>
+                <rdf:Bag>
+                </rdf:Bag>
+            </lr:hierarchicalSubject>
+        </rdf:Description>
+    </rdf:RDF>
+</x:xmpmeta>

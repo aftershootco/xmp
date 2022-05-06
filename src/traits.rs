@@ -1,3 +1,7 @@
+use std::fmt::Debug;
+
+pub trait Image: Debug + Clone {}
+
 pub trait UnrwrapOrErr<T> {
     fn unrwrap_or_err<F: FnOnce() -> E, E: std::error::Error>(self, f: F) -> Result<T, E>;
 }
