@@ -55,7 +55,7 @@ pub(crate) fn __jpeg_load_xml(path: impl AsRef<Path>) -> Result<Vec<u8>, XmpErro
 impl UpdateResults<Jpeg> {
     pub fn update(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
         let xml = __jpeg_load_xml(&path).unwrap_or_else(|_e| DEFAULT_XML.as_bytes().to_vec());
-        let xml = self.update_xml(String::from_utf8(xml)?)?.into_bytes();
+        let xml = self.update_xml(BufReader::new(xml.as_slice()))?;
         let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(std::fs::read(&path)?.into())?;
         // Do not overwrite the existing exif data
         let mut exifwriter = exif::experimental::Writer::new();
@@ -90,6 +90,13 @@ impl UpdateResults<Jpeg> {
         jpeg.encoder().write_to(&mut bfw)?;
 
         Ok(())
+    }
+}
+
+impl OptionalResults<Jpeg> {
+    pub fn load(path: impl AsRef<Path>) -> Result<Self, XmpError> {
+        let data = __jpeg_load_xml(path)?;
+        Self::from_slice(data.as_slice())
     }
 }
 

@@ -36,8 +36,6 @@ pub struct Results<T: Image> {
     __marker: PhantomData<T>,
 }
 
-// impl ImageType {}
-
 impl<T> Results<T>
 where
     T: Image,
@@ -84,7 +82,8 @@ where
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Builder)]
+// #[builder(pattern = "owned")
 pub struct UpdateResults<T: Image> {
     pub stars: Option<u8>,
     pub colors: Option<String>,
@@ -96,8 +95,12 @@ impl<T> UpdateResults<T>
 where
     T: Image,
 {
-    pub fn update_xml(&self, xml: String) -> Result<String, XmpError> {
-        let mut xmpmeta: Element = xml.parse()?;
+    pub fn update_xml<R>(&self, bytes: R) -> Result<Vec<u8>, XmpError>
+    where
+        R: BufRead,
+    {
+        let mut reader = quick_xml::Reader::from_reader(bytes);
+        let mut xmpmeta: Element = Element::from_reader(&mut reader)?;
         let rdf = xmpmeta
             // .get_child_mut("RDF", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
             .get_child_mut("RDF", minidom::NSChoice::Any)
@@ -125,6 +128,46 @@ where
         let mut xml = Vec::new();
         // let mut bxml = BufWriter::new(&mut xml);
         xmpmeta.write_to(&mut xml)?;
-        Ok(String::from_utf8(xml)?)
+        Ok(xml)
+    }
+    pub fn from_slice<R>(bytes: R) -> Result<Self, XmpError>
+    where
+        R: BufRead,
+    {
+        let mut reader = quick_xml::Reader::from_reader(bytes);
+        let xmpmeta: Element = Element::from_reader(&mut reader)?;
+        let rdf = xmpmeta
+            // .get_child("RDF", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+            .get_child("RDF", minidom::NSChoice::Any)
+            .unrwrap_or_err(|| XmpErrorKind::ChildNotFound)?;
+        let description = rdf
+            // .get_child("Description", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+            .get_child("Description", minidom::NSChoice::Any)
+            .unrwrap_or_err(|| XmpErrorKind::ChildNotFound)?;
+
+        let mut results_builder = UpdateResultsBuilder::default();
+        results_builder.colors(None);
+        results_builder.stars(None);
+        results_builder.datetime(None);
+        description.attrs().for_each(|attr| match attr {
+            ("xmp:Label", v) => {
+                results_builder.colors(Some(v.to_owned()));
+            }
+            ("xmp:Rating", v) => {
+                results_builder.stars(v.parse().ok());
+            }
+            ("xmp:CreateDate", v) => {
+                let datetime = chrono::DateTime::parse_from_rfc3339(v).map(|d| d.timestamp());
+                results_builder.datetime(datetime.ok());
+            }
+            ("exif:DateTimeOriginal", v) => {
+                let datetime = chrono::DateTime::parse_from_rfc3339(v).map(|d| d.timestamp());
+                results_builder.datetime(datetime.ok());
+            }
+            _ => (),
+        });
+        Ok(results_builder.build()?)
     }
 }
+
+pub type OptionalResults<T> = UpdateResults<T>;

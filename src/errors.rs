@@ -17,7 +17,9 @@ pub enum XmpErrorKind {
     #[error("{0}")]
     IoError(#[from] std::io::Error),
     #[error("{0}")]
-    BuilderError(#[from] crate::ResultsBuilderError),
+    RequestBuilderError(#[from] crate::ResultsBuilderError),
+    #[error("{0}")]
+    OptianlRequestBuilderError(#[from] crate::UpdateResultsBuilderError),
     #[cfg(feature = "jpeg")]
     #[error("Couldn't find xmp metadata in JFIF header")]
     JFIFHeaderMissing,
