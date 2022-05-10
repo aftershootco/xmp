@@ -1,16 +1,19 @@
 use crate::*;
-use std::io::BufReader;
+// use std::io::BufReader;
 
 impl Results {
     pub fn load_raw(path: impl AsRef<Path>) -> Result<Self, XmpError> {
-        Self::from_slice(BufReader::new(std::fs::File::open(path)?))
+        // Self::from_reader(BufReader::new(std::fs::File::open(path)?))
+        let data = std::fs::read(path)?;
+        Self::from_reader(data.as_slice())
     }
 }
 
 impl UpdateResults {
     pub fn update_raw(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
         let xml = self
-            .update_xml(BufReader::new(std::fs::File::open(&path)?), false)
+            // .update_xml(BufReader::new(std::fs::File::open(&path)?), false)
+            .update_xml(std::fs::read(&path)?.as_slice(), false)
             .unwrap_or_else(|_e| DEFAULT_XML.as_bytes().to_vec());
 
         let mut bfw = BufWriter::new(std::fs::File::create(path)?);
@@ -23,7 +26,9 @@ impl UpdateResults {
 
 impl OptionalResults {
     pub fn load_raw(path: impl AsRef<Path>) -> Result<Self, XmpError> {
-        Self::from_slice(BufReader::new(std::fs::File::open(path)?))
+        // Self::from_reader(BufReader::new(std::fs::File::open(path)?))
+        let data = std::fs::read(path)?;
+        Self::from_reader(data.as_slice())
     }
 }
 

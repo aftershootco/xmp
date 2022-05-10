@@ -7,7 +7,7 @@ use std::io::BufReader;
 impl Results {
     pub fn load_jpg(path: impl AsRef<Path>) -> Result<Self, XmpError> {
         let data = __jpeg_load_xml(path)?;
-        Self::from_slice(data.as_slice())
+        Self::from_reader(data.as_slice())
     }
 }
 
@@ -51,11 +51,14 @@ impl UpdateResults {
     pub fn update_jpg(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
         let xml = __jpeg_load_xml(&path).unwrap_or_else(|_e| DEFAULT_XML.as_bytes().to_vec());
         let xml = self.update_xml(BufReader::new(xml.as_slice()), false)?;
-        let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(std::fs::read(&path)?.into())?;
+        let data = std::fs::read(&path)?;
+        // let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(std::fs::read(&path)?.into())?;
+        let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(data.into())?;
         // Do not overwrite the existing exif data
         let mut exifwriter = exif::experimental::Writer::new();
 
         let exif = jpeg.exif().and_then(|exif_data| {
+            std::fs::write("exif", &exif_data).ok();
             let exifreader = exif::Reader::new();
             exifreader.read_raw(exif_data.to_vec()).ok()
         });
@@ -69,7 +72,13 @@ impl UpdateResults {
         let mut exif_data = std::io::Cursor::new(Vec::new());
 
         if let Some(exif) = exif {
-            exif.fields().for_each(|f| exifwriter.push_field(f));
+            let mut insert: HashSet<Tag> = exif.fields().map(|f| f.tag).collect();
+            for field in exif.fields() {
+                if insert.contains(&field.tag) {
+                    exifwriter.push_field(field);
+                    insert.remove(&field.tag);
+                }
+            }
             exifwriter.push_field(&exif_xml_tag);
             exifwriter.write(&mut exif_data, false)?;
         } else {
@@ -77,13 +86,16 @@ impl UpdateResults {
             exifwriter.write(&mut exif_data, false)?;
         }
 
+        let exif_data = exif_data.into_inner();
         jpeg.remove_segments_by_marker(0xE0);
-        jpeg.set_exif(Some(exif_data.into_inner().into()));
+        jpeg.set_exif(Some(exif_data.into()));
 
-        let mut bfw = BufWriter::new(std::fs::File::create(path)?);
+        let temp = path.as_ref().with_extension("temp");
+        let mut bfw = BufWriter::new(std::fs::File::create(&temp)?);
 
         jpeg.encoder().write_to(&mut bfw)?;
         bfw.flush()?;
+        std::fs::rename(temp, path)?;
 
         Ok(())
     }
@@ -92,7 +104,7 @@ impl UpdateResults {
 impl OptionalResults {
     pub fn load_jpg(path: impl AsRef<Path>) -> Result<Self, XmpError> {
         let data = __jpeg_load_xml(path)?;
-        Self::from_slice(data.as_slice())
+        Self::from_reader(data.as_slice())
     }
 }
 
@@ -114,7 +126,5 @@ pub fn test_jpeg_exif_load_updated() {
     };
     println!("Writing");
     UpdateResults::update(&x, "assets/3.jpg").unwrap();
-    UpdateResults::update(&x, "assets/4.jpg").unwrap();
     println!("Reading");
-    println!("{:?}", Results::load("assets/3.jpg").unwrap());
 }

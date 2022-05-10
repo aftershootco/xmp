@@ -81,11 +81,11 @@ pub struct Results {
 }
 
 impl Results {
-    pub fn from_slice<R>(bytes: R) -> Result<Self, XmpError>
+    pub fn from_reader<R>(reader: R) -> Result<Self, XmpError>
     where
         R: BufRead,
     {
-        let mut reader = quick_xml::Reader::from_reader(bytes);
+        let mut reader = quick_xml::Reader::from_reader(reader);
         let xmpmeta: Element = Element::from_reader(&mut reader)?;
         let description = xmpmeta
             .get_child("RDF", RDF)
@@ -232,7 +232,8 @@ impl UpdateResults {
         }
         Ok(xml)
     }
-    pub fn from_slice<R>(bytes: R) -> Result<Self, XmpError>
+
+    pub fn from_reader<R>(bytes: R) -> Result<Self, XmpError>
     where
         R: BufRead,
     {
