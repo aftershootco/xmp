@@ -83,6 +83,7 @@ impl UpdateResults {
         let mut bfw = BufWriter::new(std::fs::File::create(path)?);
 
         jpeg.encoder().write_to(&mut bfw)?;
+        bfw.flush()?;
 
         Ok(())
     }

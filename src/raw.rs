@@ -12,9 +12,10 @@ impl UpdateResults {
         let xml = self
             .update_xml(BufReader::new(std::fs::File::open(&path)?), false)
             .unwrap_or_else(|_e| DEFAULT_XML.as_bytes().to_vec());
-        let mut f = std::fs::File::create(path)?;
-        let mut bf = BufWriter::new(&mut f);
-        bf.write_all(xml.as_slice())?;
+
+        let mut bfw = BufWriter::new(std::fs::File::create(path)?);
+        bfw.write_all(xml.as_slice())?;
+        bfw.flush()?;
 
         Ok(())
     }
