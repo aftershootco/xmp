@@ -58,7 +58,6 @@ impl UpdateResults {
         let mut exifwriter = exif::experimental::Writer::new();
 
         let exif = jpeg.exif().and_then(|exif_data| {
-            std::fs::write("exif", &exif_data).ok();
             let exifreader = exif::Reader::new();
             exifreader.read_raw(exif_data.to_vec()).ok()
         });
@@ -93,6 +92,7 @@ impl UpdateResults {
         let temp = path.as_ref().with_extension("temp");
         let mut bfw = BufWriter::new(std::fs::File::create(&temp)?);
 
+        // This might cause panics
         jpeg.encoder().write_to(&mut bfw)?;
         bfw.flush()?;
         std::fs::rename(temp, path)?;
