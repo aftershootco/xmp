@@ -1,30 +1,36 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use minidom::Element;
-use minidom::NSChoice;
 use std::clone::Clone;
 use std::collections::HashSet;
+use std::ffi::OsStr;
 use std::io::BufRead;
 use std::io::BufWriter;
 use std::io::Write;
-use std::marker::PhantomData;
 use std::path::Path;
+use std::path::PathBuf;
 
 const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 const DC: &str = "http://purl.org/dc/elements/1.1/";
 const LR: &str = "http://ns.adobe.com/lightroom/1.0/";
+
+const XMP_EXT: [&str; 1] = ["xmp"];
+const RAW_EXT: [&str; 37] = [
+    "nef", "3fr", "ari", "arw", "bay", "crw", "cr2", "cr3", "cap", "dcs", "dcr", "dng", "drf",
+    "eip", "erf", "fff", "gpr", "mdc", "mef", "mos", "mrw", "nrw", "obm", "orf", "pef", "ptx",
+    "pxn", "r3d", "raw", "rwl", "rw2", "rwz", "sr2", "srf", "srw", "x3f", "raf",
+];
+const JPG_EXT: [&str; 9] = [
+    "jpg", "jpeg", "png", "heic", "avif", "heif", "tiff", "tif", "hif",
+];
 
 #[macro_use]
 extern crate derive_builder;
 
 #[cfg(feature = "jpeg")]
 mod jpg;
-#[cfg(feature = "jpeg")]
-pub use jpg::*;
 
 #[cfg(feature = "raw")]
 mod raw;
-#[cfg(feature = "raw")]
-pub use raw::*;
 
 const DEFAULT_XML: &str = include_str!("default.xmp");
 
@@ -34,37 +40,59 @@ use errors::{XmpError, XmpErrorKind};
 mod traits;
 use traits::*;
 
+pub enum ImageType {
+    Raw,
+    Xmp,
+    Jpg,
+    Others,
+}
+
+impl<T> From<T> for ImageType
+where
+    T: AsRef<Path>,
+{
+    fn from(p: T) -> Self {
+        p.as_ref()
+            .extension()
+            .and_then(OsStr::to_str)
+            .map(str::to_ascii_lowercase)
+            .map(|ext| {
+                if JPG_EXT.contains(&ext.as_str()) {
+                    Self::Jpg
+                } else if RAW_EXT.contains(&ext.as_str()) {
+                    Self::Raw
+                } else if XMP_EXT.contains(&ext.as_str()) {
+                    Self::Xmp
+                } else {
+                    Self::Others
+                }
+            })
+            .unwrap_or(Self::Others)
+    }
+}
+
 #[derive(Debug, Builder, Default)]
-pub struct Results<T: Image> {
+pub struct Results {
     pub stars: u8,
     pub colors: String,
     pub datetime: i64,
     pub subjects: Vec<String>,
     pub hierarchies: Vec<String>,
-    __marker: PhantomData<T>,
 }
 
-impl<T> Results<T>
-where
-    T: Image,
-{
+impl Results {
     pub fn from_slice<R>(bytes: R) -> Result<Self, XmpError>
     where
         R: BufRead,
     {
         let mut reader = quick_xml::Reader::from_reader(bytes);
         let xmpmeta: Element = Element::from_reader(&mut reader)?;
-        let rdf = xmpmeta
-            // .get_child("RDF", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-            .get_child("RDF", NSChoice::Any)
-            .otor(|| XmpErrorKind::ChildNotFound)?;
-        let description = rdf
-            // .get_child("Description", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-            .get_child("Description", NSChoice::Any)
+        let description = xmpmeta
+            .get_child("RDF", RDF)
+            .and_then(|rdf| rdf.get_child("Description", RDF))
             .otor(|| XmpErrorKind::ChildNotFound)?;
 
         let mut results_builder = ResultsBuilder::default();
-        results_builder.__marker(PhantomData);
         description.attrs().for_each(|attr| match attr {
             ("xmp:Label", v) => {
                 results_builder.colors(v.to_owned());
@@ -87,51 +115,61 @@ where
             _ => (),
         });
         let subjects = description
-            .get_child("subject", NSChoice::Any)
-            .and_then(|subject| subject.get_child("Bag", NSChoice::Any))
+            .get_child("subject", DC)
+            .and_then(|subject| subject.get_child("Bag", RDF))
             .map(|bag| bag.children().map(|li| li.text()).collect::<Vec<String>>())
             .otor(|| XmpErrorKind::ChildNotFound)?;
         results_builder.subjects(subjects);
 
         let hierarchies = description
-            .get_child("hierarchicalSubject", NSChoice::Any)
-            .and_then(|hierarchies| hierarchies.get_child("Bag", NSChoice::Any))
+            .get_child("hierarchicalSubject", LR)
+            .and_then(|hierarchies| hierarchies.get_child("Bag", RDF))
             .map(|bag| bag.children().map(|li| li.text()).collect::<Vec<String>>())
             .otor(|| XmpErrorKind::ChildNotFound)?;
         results_builder.hierarchies(hierarchies);
 
         Ok(results_builder.build()?)
     }
+
+    #[inline]
+    pub fn load(path: impl AsRef<Path>) -> Result<Self, XmpError> {
+        let img_type = ImageType::from(&path);
+        match img_type {
+            ImageType::Jpg => Self::load_jpg(path),
+            ImageType::Raw => {
+                if let Some(path) = exists_with_extension(&path, "xmp") {
+                    Self::load_raw(path)
+                } else {
+                    eprintln!("\x1b[31mRaw files not supported and xmp file not found\x1b[0m");
+                    Err(XmpError::from(XmpErrorKind::InvalidFileType))
+                }
+            }
+            ImageType::Xmp => Self::load_raw(path),
+            ImageType::Others => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
+        }
+    }
 }
 
 #[derive(Debug, Default, Builder)]
 // #[builder(pattern = "owned")
-pub struct UpdateResults<T: Image> {
+pub struct UpdateResults {
     pub stars: Option<u8>,
     pub colors: Option<String>,
     pub datetime: Option<i64>,
     pub subjects: Option<Vec<String>>,
     pub hierarchies: Option<Vec<String>>,
-    __marker: PhantomData<T>,
 }
 
-impl<T> UpdateResults<T>
-where
-    T: Image,
-{
+impl UpdateResults {
     pub fn update_xml<R>(&self, bytes: R, indent: bool) -> Result<Vec<u8>, XmpError>
     where
         R: BufRead,
     {
         let mut reader = quick_xml::Reader::from_reader(bytes);
         let mut xmpmeta: Element = Element::from_reader(&mut reader)?;
-        let rdf = xmpmeta
-            // .get_child_mut("RDF", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-            .get_child_mut("RDF", NSChoice::Any)
-            .otor(|| XmpErrorKind::ChildNotFound)?;
-        let description = rdf
-            // .get_child_mut("Description", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-            .get_child_mut("Description", NSChoice::Any)
+        let description = xmpmeta
+            .get_child_mut("RDF", RDF)
+            .and_then(|rdf| rdf.get_child_mut("Description", RDF))
             .otor(|| XmpErrorKind::ChildNotFound)?;
 
         if let Some(stars) = self.stars {
@@ -179,10 +217,10 @@ where
                 .iter()
                 .map(|s| Element::builder("li", RDF).append(s.as_str()).build())
                 .collect();
-            let lr_hierarchichalsubjects = Element::builder("hierarchicalSubject", LR)
+            let lr_hierarchicalsubjects = Element::builder("hierarchicalSubject", LR)
                 .append(Element::builder("Bag", RDF).append_all(hierarchies).build())
                 .build();
-            description.append_child(lr_hierarchichalsubjects);
+            description.append_child(lr_hierarchicalsubjects);
         }
 
         let mut xml = Vec::new();
@@ -200,13 +238,9 @@ where
     {
         let mut reader = quick_xml::Reader::from_reader(bytes);
         let xmpmeta: Element = Element::from_reader(&mut reader)?;
-        let rdf = xmpmeta
-            // .get_child("RDF", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-            .get_child("RDF", NSChoice::Any)
-            .otor(|| XmpErrorKind::ChildNotFound)?;
-        let description = rdf
-            // .get_child("Description", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-            .get_child("Description", NSChoice::Any)
+        let description = xmpmeta
+            .get_child("RDF", RDF)
+            .and_then(|rdf| rdf.get_child("Description", RDF))
             .otor(|| XmpErrorKind::ChildNotFound)?;
 
         let mut results_builder = UpdateResultsBuilder::default();
@@ -215,7 +249,6 @@ where
         results_builder.datetime(None);
         results_builder.subjects(None);
         results_builder.hierarchies(None);
-        results_builder.__marker(PhantomData);
         description.attrs().for_each(|attr| match attr {
             ("xmp:Label", v) => {
                 results_builder.colors(Some(v.to_owned()));
@@ -234,20 +267,74 @@ where
             _ => (),
         });
         let subjects = description
-            .get_child("subject", NSChoice::Any)
-            .and_then(|subject| subject.get_child("Bag", NSChoice::Any))
+            .get_child("subject", DC)
+            .and_then(|subject| subject.get_child("Bag", RDF))
             .map(|bag| bag.children().map(|li| li.text()).collect::<Vec<String>>());
 
         results_builder.subjects(subjects);
 
         let hierarchies = description
-            .get_child("hierarchicalSubject", NSChoice::Any)
-            .and_then(|hierarchies| hierarchies.get_child("Bag", NSChoice::Any))
+            .get_child("hierarchicalSubject", LR)
+            .and_then(|hierarchies| hierarchies.get_child("Bag", RDF))
             .map(|bag| bag.children().map(|li| li.text()).collect::<Vec<String>>());
         results_builder.hierarchies(hierarchies);
 
         Ok(results_builder.build()?)
     }
+
+    #[inline]
+    pub fn update(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
+        self.write_to(path)
+    }
+
+    #[inline]
+    pub fn write_to(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
+        let img_type = ImageType::from(&path);
+        match img_type {
+            ImageType::Jpg => self.update_jpg(path),
+            ImageType::Raw => {
+                if let Some(path) = exists_with_extension(&path, "xmp") {
+                    self.update_raw(path)
+                } else {
+                    eprintln!("\x1b[31mRaw files not supported and xmp file not found\x1b[0m");
+                    Err(XmpError::from(XmpErrorKind::InvalidFileType))
+                }
+            }
+            ImageType::Xmp => self.update_raw(path),
+            ImageType::Others => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
+        }
+    }
 }
 
-pub type OptionalResults<T> = UpdateResults<T>;
+pub type OptionalResults = UpdateResults;
+
+impl OptionalResults {
+    #[inline]
+    pub fn load(path: impl AsRef<Path>) -> Result<Self, XmpError> {
+        let img_type = ImageType::from(&path);
+        match img_type {
+            ImageType::Jpg => OptionalResults::load_jpg(path),
+            ImageType::Raw => {
+                if let Some(path) = exists_with_extension(&path, "xmp") {
+                    OptionalResults::load_raw(path)
+                } else {
+                    eprintln!("\x1b[31mRaw files not supported and xmp file not found\x1b[0m");
+                    Err(XmpError::from(XmpErrorKind::InvalidFileType))
+                }
+            }
+            ImageType::Xmp => OptionalResults::load_raw(path),
+            ImageType::Others => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
+        }
+    }
+}
+
+#[inline]
+fn exists_with_extension(path: impl AsRef<Path>, ext: impl AsRef<OsStr>) -> Option<PathBuf> {
+    let new_path = path.as_ref().with_extension(ext);
+    // println!("{:?}", path);
+    if new_path.exists() && new_path == path.as_ref().to_path_buf() {
+        std::fs::canonicalize(path).ok()
+    } else {
+        None
+    }
+}

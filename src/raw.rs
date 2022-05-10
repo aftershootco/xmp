@@ -1,19 +1,15 @@
 use crate::*;
 use std::io::BufReader;
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Raw;
 
-impl Image for Raw {}
-
-impl Results<Raw> {
-    pub fn load(path: impl AsRef<Path>) -> Result<Self, XmpError> {
+impl Results {
+    pub fn load_raw(path: impl AsRef<Path>) -> Result<Self, XmpError> {
         Self::from_slice(BufReader::new(std::fs::File::open(path)?))
     }
 }
 
-impl UpdateResults<Raw> {
-    pub fn update(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
+impl UpdateResults {
+    pub fn update_raw(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
         let xml = self
             .update_xml(BufReader::new(std::fs::File::open(&path)?), false)
             .unwrap_or_else(|_e| DEFAULT_XML.as_bytes().to_vec());
@@ -25,18 +21,15 @@ impl UpdateResults<Raw> {
     }
 }
 
-impl OptionalResults<Raw> {
-    pub fn load(path: impl AsRef<Path>) -> Result<Self, XmpError> {
+impl OptionalResults {
+    pub fn load_raw(path: impl AsRef<Path>) -> Result<Self, XmpError> {
         Self::from_slice(BufReader::new(std::fs::File::open(path)?))
     }
 }
 
 #[test]
 pub fn read_xmp() {
-    println!(
-        "{:?}",
-        OptionalResults::<Raw>::load("assets/file.xmp").unwrap()
-    );
+    println!("{:?}", OptionalResults::load("assets/file.xmp").unwrap());
 }
 
 #[test]
@@ -45,8 +38,8 @@ pub fn set_color() {
         colors: Some(String::from("Blue")),
         ..Default::default()
     };
-    UpdateResults::<Raw>::update(&x, "assets/f.xmp").unwrap();
-    println!("{:?}", Results::<Raw>::load("assets/f.xmp").unwrap());
+    UpdateResults::update(&x, "assets/f.xmp").unwrap();
+    println!("{:?}", Results::load("assets/f.xmp").unwrap());
 }
 
 #[test]
@@ -56,9 +49,6 @@ pub fn set_subjects() {
         hierarchies: Some(vec!["Some".to_owned(), "stuff".to_owned()]),
         ..Default::default()
     };
-    UpdateResults::<Raw>::update(&x, "assets/f.xmp").unwrap();
-    println!(
-        "{:?}",
-        OptionalResults::<Raw>::load("assets/f.xmp").unwrap()
-    );
+    UpdateResults::update(&x, "assets/f.xmp").unwrap();
+    println!("{:?}", OptionalResults::load("assets/f.xmp").unwrap());
 }

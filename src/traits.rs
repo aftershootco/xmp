@@ -1,7 +1,3 @@
-use std::fmt::Debug;
-
-pub trait Image: Debug + Clone {}
-
 pub trait OtoR<T> {
     fn otor<F: FnOnce() -> E, E: std::error::Error>(self, f: F) -> Result<T, E>;
 }

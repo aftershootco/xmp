@@ -4,13 +4,8 @@ use img_parts::ImageEXIF;
 use jfifdump::{Reader, SegmentKind};
 use std::io::BufReader;
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Jpeg;
-
-impl Image for Jpeg {}
-
-impl Results<Jpeg> {
-    pub fn load(path: impl AsRef<Path>) -> Result<Self, XmpError> {
+impl Results {
+    pub fn load_jpg(path: impl AsRef<Path>) -> Result<Self, XmpError> {
         let data = __jpeg_load_xml(path)?;
         Self::from_slice(data.as_slice())
     }
@@ -52,8 +47,8 @@ pub(crate) fn __jpeg_load_xml(path: impl AsRef<Path>) -> Result<Vec<u8>, XmpErro
     Err(XmpErrorKind::XMPMissing.into())
 }
 
-impl UpdateResults<Jpeg> {
-    pub fn update(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
+impl UpdateResults {
+    pub fn update_jpg(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
         let xml = __jpeg_load_xml(&path).unwrap_or_else(|_e| DEFAULT_XML.as_bytes().to_vec());
         let xml = self.update_xml(BufReader::new(xml.as_slice()), false)?;
         let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(std::fs::read(&path)?.into())?;
@@ -93,8 +88,8 @@ impl UpdateResults<Jpeg> {
     }
 }
 
-impl OptionalResults<Jpeg> {
-    pub fn load(path: impl AsRef<Path>) -> Result<Self, XmpError> {
+impl OptionalResults {
+    pub fn load_jpg(path: impl AsRef<Path>) -> Result<Self, XmpError> {
         let data = __jpeg_load_xml(path)?;
         Self::from_slice(data.as_slice())
     }
