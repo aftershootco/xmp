@@ -1,7 +1,6 @@
 use crate::*;
 use std::io::BufReader;
 
-
 impl Results {
     pub fn load_raw(path: impl AsRef<Path>) -> Result<Self, XmpError> {
         Self::from_slice(BufReader::new(std::fs::File::open(path)?))

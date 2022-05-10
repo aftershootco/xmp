@@ -97,23 +97,23 @@ impl OptionalResults {
 
 #[test]
 pub fn test_jpeg_jfif_load() {
-    Results::<Jpeg>::load("assets/1.jpg").unwrap();
+    Results::load("assets/1.jpg").unwrap();
 }
 #[test]
 pub fn test_jpeg_exif_load() {
-    Results::<Jpeg>::load("assets/2.jpg").unwrap();
+    Results::load("assets/2.jpg").unwrap();
 }
 
-// #[test]
-// pub fn test_jpeg_exif_load_updated() {
-//     let x = UpdateResults {
-//         stars: Some(3),
-//         colors: Some(String::from("Blue")),
-//         ..Default::default()
-//     };
-//     println!("Writing");
-//     UpdateResults::<Jpeg>::update(&x, "assets/3.jpg").unwrap();
-//     UpdateResults::<Jpeg>::update(&x, "assets/4.jpg").unwrap();
-//     println!("Reading");
-//     println!("{:?}", Results::<Jpeg>::load("assets/3.jpg").unwrap());
-// }
+#[test]
+pub fn test_jpeg_exif_load_updated() {
+    let x = UpdateResults {
+        stars: Some(3),
+        colors: Some(String::from("Blue")),
+        ..Default::default()
+    };
+    println!("Writing");
+    UpdateResults::update(&x, "assets/3.jpg").unwrap();
+    UpdateResults::update(&x, "assets/4.jpg").unwrap();
+    println!("Reading");
+    println!("{:?}", Results::load("assets/3.jpg").unwrap());
+}
