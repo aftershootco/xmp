@@ -15,7 +15,7 @@ impl Results<Raw> {
 impl UpdateResults<Raw> {
     pub fn update(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
         let xml = self
-            .update_xml(BufReader::new(std::fs::File::open(&path)?))
+            .update_xml(BufReader::new(std::fs::File::open(&path)?), false)
             .unwrap_or_else(|_e| DEFAULT_XML.as_bytes().to_vec());
         let mut f = std::fs::File::create(path)?;
         let mut bf = BufWriter::new(&mut f);
@@ -32,16 +32,33 @@ impl OptionalResults<Raw> {
 }
 
 #[test]
-pub fn xmp_file() {
-    println!("{:?}", Results::<Raw>::load("assets/file.xmp").unwrap());
+pub fn read_xmp() {
+    println!(
+        "{:?}",
+        OptionalResults::<Raw>::load("assets/file.xmp").unwrap()
+    );
 }
 
 #[test]
-pub fn set_xmp() {
+pub fn set_color() {
     let x = UpdateResults {
         colors: Some(String::from("Blue")),
         ..Default::default()
     };
     UpdateResults::<Raw>::update(&x, "assets/f.xmp").unwrap();
     println!("{:?}", Results::<Raw>::load("assets/f.xmp").unwrap());
+}
+
+#[test]
+pub fn set_subjects() {
+    let x = UpdateResults {
+        subjects: Some(vec!["HELLO".to_owned(), "World".to_owned()]),
+        hierarchies: Some(vec!["Some".to_owned(), "stuff".to_owned()]),
+        ..Default::default()
+    };
+    UpdateResults::<Raw>::update(&x, "assets/f.xmp").unwrap();
+    println!(
+        "{:?}",
+        OptionalResults::<Raw>::load("assets/f.xmp").unwrap()
+    );
 }

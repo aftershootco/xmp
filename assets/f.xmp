@@ -13,12 +13,7 @@
 					<rdf:li stEvt:action="saved" stEvt:changed="/metadata" stEvt:instanceID="xmp.iid:7caa4390-1b09-4f10-bf72-9756c67c0f7e" stEvt:softwareAgent="Adobe Photoshop Lightroom Classic 11.1 (Macintosh)" stEvt:when="2022-01-08T11:50:44-05:00"/>
 				</rdf:Seq>
 			</xmpMM:History>
-			<dc:subject>
-				<rdf:Bag>
-					<rdf:li>Duplicates</rdf:li>
-					<rdf:li>Blurred</rdf:li>
-				</rdf:Bag>
-			</dc:subject>
+			
 			<lr:weightedFlatSubject>
 				<rdf:Bag>
 					<rdf:li>Duplicates</rdf:li>
@@ -75,12 +70,12 @@
 					<crs:Parameters crs:CameraProfile="DVLOP X" crs:CameraProfileDigest="E89FA237E9D4EF49C7F2A6F0A40F4BC0" crs:ConvertToGrayscale="False" crs:Exposure2012="+0.45" crs:ProcessVersion="11.0" crs:RGBTable="23E5F7A7B76177CCE79F84FAD06799D4" crs:Version="14.1"/>
 				</rdf:Description>
 			</crs:Look>
-			<lr:hierarchicalSubject>
-				<rdf:Bag>
-					<rdf:li>Duplicates</rdf:li>
-					<rdf:li>Blurred</rdf:li>
-				</rdf:Bag>
-			</lr:hierarchicalSubject>
-		</rdf:Description>
+        
+            
+        
+                        
+                
+            
+        <dc:subject><rdf:Bag><rdf:li>HELLO</rdf:li><rdf:li>World</rdf:li></rdf:Bag></dc:subject><lr:hierarchicalSubject><rdf:Bag><rdf:li>Some</rdf:li><rdf:li>stuff</rdf:li></rdf:Bag></lr:hierarchicalSubject></rdf:Description>
 	</rdf:RDF>
 </x:xmpmeta>
