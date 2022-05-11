@@ -110,21 +110,65 @@ impl OptionalResults {
 
 #[test]
 pub fn test_jpeg_jfif_load() {
-    Results::load("assets/1.jpg").unwrap();
+    let r = Results::load("assets/1.jpg").unwrap();
+    let e = Results {
+        stars: 5,
+        colors: "Red".to_string(),
+        datetime: 1633790597,
+        subjects: vec!["Duplicates", "Selected"]
+            .iter()
+            .map(ToString::to_string)
+            .collect(),
+        hierarchies: vec!["Duplicates"].iter().map(ToString::to_string).collect(),
+    };
+    assert_eq!(r, e);
 }
 #[test]
 pub fn test_jpeg_exif_load() {
-    Results::load("assets/2.jpg").unwrap();
+    let e = Results {
+        stars: 3,
+        colors: "Yellow".to_string(),
+        datetime: 0,
+        subjects: vec!["Duplicates", "Selected"]
+            .iter()
+            .map(ToString::to_string)
+            .collect(),
+        hierarchies: vec!["Duplicates"].iter().map(ToString::to_string).collect(),
+    };
+    let r = Results::load("assets/2.jpg").unwrap();
+    assert_eq!(r, e);
 }
 
 #[test]
 pub fn test_jpeg_exif_load_updated() {
-    let x = UpdateResults {
+    let r_1 = OptionalResults::load("assets/3.jpg").unwrap();
+    let u = UpdateResults {
         stars: Some(3),
         colors: Some(String::from("Blue")),
         ..Default::default()
     };
-    println!("Writing");
-    UpdateResults::update(&x, "assets/3.jpg").unwrap();
-    println!("Reading");
+    u.update("assets/3.jpg").unwrap();
+    let r_2 = OptionalResults::load("assets/3.jpg").unwrap();
+    let e = OptionalResults {
+        stars: Some(3),
+        colors: Some(String::from("Blue")),
+        datetime: Some(1633790597),
+        subjects: Some(
+            vec!["Duplicates", "Selected"]
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
+        ),
+        hierarchies: Some(vec!["Duplicates"].iter().map(ToString::to_string).collect()),
+    };
+    assert_eq!(r_2, e);
+
+    let u = UpdateResults {
+        stars: Some(5),
+        colors: Some(String::from("Red")),
+        ..Default::default()
+    };
+    u.update("assets/3.jpg").unwrap();
+    let r_3 = OptionalResults::load("assets/3.jpg").unwrap();
+    assert_eq!(r_1, r_3);
 }

@@ -71,7 +71,7 @@ where
     }
 }
 
-#[derive(Debug, Builder, Default)]
+#[derive(Debug, Builder, Default, PartialEq)]
 pub struct Results {
     pub stars: u8,
     pub colors: String,
@@ -150,8 +150,7 @@ impl Results {
     }
 }
 
-#[derive(Debug, Default, Builder)]
-// #[builder(pattern = "owned")
+#[derive(Debug, Default, Builder, PartialEq)]
 pub struct UpdateResults {
     pub stars: Option<u8>,
     pub colors: Option<String>,
