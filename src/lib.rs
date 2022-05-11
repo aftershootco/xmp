@@ -186,40 +186,71 @@ impl UpdateResults {
             description.set_attr("exif:DateTimeOriginal", datetime);
         }
         if let Some(ref subjects) = self.subjects {
-            let mut subjects: HashSet<String> = subjects.iter().cloned().collect();
+            let subjects: HashSet<String> = subjects.iter().cloned().collect();
             if let Some(bag) = description
                 .get_child_mut("subject", DC)
                 .and_then(|subjects| subjects.get_child_mut("Bag", RDF))
             {
-                subjects.extend(bag.children().map(|li| li.text()));
+                let existing: HashSet<String> = bag
+                    .children()
+                    .filter(|ch| ch.is("li", RDF))
+                    .map(|li| li.text())
+                    .collect();
+                if existing != subjects {
+                    // for _ in 0..existing.len() {
+                    //     bag.remove_child("li", RDF);
+                    // }
+                    let list: Vec<Element> = subjects
+                        .iter()
+                        .map(|s| Element::builder("li", RDF).append(s.as_str()).build())
+                        .collect();
+                    // .for_each(|e| {
+                    //     bag.append_child(e);
+                    // });
+                    *bag = Element::builder("Bag", RDF).append_all(list).build();
+                }
+            } else {
+                let subjects: Vec<Element> = subjects
+                    .iter()
+                    .map(|s| Element::builder("li", RDF).append(s.as_str()).build())
+                    .collect();
+                let dc_subjects = Element::builder("subject", DC)
+                    .append(Element::builder("Bag", RDF).append_all(subjects).build())
+                    .build();
                 description.remove_child("subject", DC);
+                description.append_child(dc_subjects);
             }
-            let subjects: Vec<Element> = subjects
-                .iter()
-                .map(|s| Element::builder("li", RDF).append(s.as_str()).build())
-                .collect();
-            let dc_subjects = Element::builder("subject", DC)
-                .append(Element::builder("Bag", RDF).append_all(subjects).build())
-                .build();
-            description.append_child(dc_subjects);
         }
         if let Some(ref hierarchies) = self.hierarchies {
-            let mut hierarchies: HashSet<String> = hierarchies.iter().cloned().collect();
+            let hierarchies: HashSet<String> = hierarchies.iter().cloned().collect();
             if let Some(bag) = description
                 .get_child_mut("hierarchicalSubject", LR)
                 .and_then(|hierarchy| hierarchy.get_child_mut("Bag", RDF))
             {
-                hierarchies.extend(bag.children().map(|li| li.text()));
+                let existing: HashSet<String> = bag
+                    .children()
+                    .filter(|ch| ch.is("li", RDF))
+                    .map(|li| li.text())
+                    .collect();
+                // Only update if the new is not the same as the existing
+                if existing != hierarchies {
+                    let list: Vec<Element> = hierarchies
+                        .iter()
+                        .map(|s| Element::builder("li", RDF).append(s.as_str()).build())
+                        .collect();
+                    *bag = Element::builder("Bag", RDF).append_all(list).build()
+                }
+            } else {
+                let hierarchies: Vec<Element> = hierarchies
+                    .iter()
+                    .map(|s| Element::builder("li", RDF).append(s.as_str()).build())
+                    .collect();
+                let lr_hierarchicalsubjects = Element::builder("hierarchicalSubject", LR)
+                    .append(Element::builder("Bag", RDF).append_all(hierarchies).build())
+                    .build();
                 description.remove_child("hierarchicalSubject", LR);
-            };
-            let hierarchies: Vec<Element> = hierarchies
-                .iter()
-                .map(|s| Element::builder("li", RDF).append(s.as_str()).build())
-                .collect();
-            let lr_hierarchicalsubjects = Element::builder("hierarchicalSubject", LR)
-                .append(Element::builder("Bag", RDF).append_all(hierarchies).build())
-                .build();
-            description.append_child(lr_hierarchicalsubjects);
+                description.append_child(lr_hierarchicalsubjects);
+            }
         }
 
         let mut xml = Vec::new();
