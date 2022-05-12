@@ -3,11 +3,12 @@ use exif::{Context, Field, In, Tag, Value};
 use img_parts::ImageEXIF;
 use jfifdump::{Reader, SegmentKind};
 use std::io::BufReader;
+use std::io::Cursor;
 
 impl Results {
     pub fn load_jpg(path: impl AsRef<Path>) -> Result<Self, XmpError> {
-        let data = __jpeg_load_xml(path)?;
-        Self::from_reader(data.as_slice())
+        let data = Cursor::new(__jpeg_load_xml(path)?);
+        Self::from_reader(data)
     }
 }
 
@@ -50,7 +51,7 @@ pub(crate) fn __jpeg_load_xml(path: impl AsRef<Path>) -> Result<Vec<u8>, XmpErro
 impl UpdateResults {
     pub fn update_jpg(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
         let xml = __jpeg_load_xml(&path).unwrap_or_else(|_e| DEFAULT_XML.as_bytes().to_vec());
-        let xml = self.update_xml(BufReader::new(xml.as_slice()), false)?;
+        let xml = self.update_xml(Cursor::new(xml), false)?;
         let data = std::fs::read(&path)?;
         // let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(std::fs::read(&path)?.into())?;
         let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(data.into())?;
@@ -104,7 +105,8 @@ impl UpdateResults {
 impl OptionalResults {
     pub fn load_jpg(path: impl AsRef<Path>) -> Result<Self, XmpError> {
         let data = __jpeg_load_xml(path)?;
-        Self::from_reader(data.as_slice())
+        let data_cursor = Cursor::new(data.as_slice());
+        Self::from_reader(data_cursor)
     }
 }
 

@@ -36,6 +36,8 @@ pub enum XmpErrorKind {
     #[cfg(feature = "jpeg")]
     #[error("{0}")]
     ExifError(#[from] exif::Error),
+    #[error("{0}")]
+    QuickXml(#[from] quick_xml::Error),
 }
 
 impl std::fmt::Display for XmpError {

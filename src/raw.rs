@@ -3,17 +3,17 @@ use crate::*;
 
 impl Results {
     pub fn load_raw(path: impl AsRef<Path>) -> Result<Self, XmpError> {
-        // Self::from_reader(BufReader::new(std::fs::File::open(path)?))
-        let data = std::fs::read(path)?;
-        Self::from_reader(data.as_slice())
+        Self::from_reader(BufReader::new(std::fs::File::open(path)?))
+        // let data = std::fs::read(path)?;
+        // Self::from_reader(data)
     }
 }
 
 impl UpdateResults {
     pub fn update_raw(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
         let xml = self
-            // .update_xml(BufReader::new(std::fs::File::open(&path)?), false)
-            .update_xml(std::fs::read(&path)?.as_slice(), false)
+            .update_xml(BufReader::new(std::fs::File::open(&path)?), false)
+            // .update_xml(std::fs::read(&path)?.as_slice(), false)
             .unwrap_or_else(|_e| DEFAULT_XML.as_bytes().to_vec());
 
         let mut bfw = BufWriter::new(std::fs::File::create(path)?);
@@ -26,9 +26,9 @@ impl UpdateResults {
 
 impl OptionalResults {
     pub fn load_raw(path: impl AsRef<Path>) -> Result<Self, XmpError> {
-        // Self::from_reader(BufReader::new(std::fs::File::open(path)?))
-        let data = std::fs::read(path)?;
-        Self::from_reader(data.as_slice())
+        Self::from_reader(BufReader::new(std::fs::File::open(path)?))
+        // let data = std::fs::read(path)?;
+        // Self::from_reader(data.as_slice())
     }
 }
 
@@ -56,4 +56,15 @@ pub fn set_subjects() {
     };
     UpdateResults::update(&x, "assets/f.xmp").unwrap();
     println!("{:?}", OptionalResults::load("assets/f.xmp").unwrap());
+}
+
+#[test]
+pub fn missing_namespace() {
+    let e = OptionalResults {
+        stars: Some(3),
+        datetime: Some(1651333056),
+        ..Default::default()
+    };
+    let r = OptionalResults::load("assets/missing_ns.xmp").unwrap();
+    assert_eq!(e, r);
 }

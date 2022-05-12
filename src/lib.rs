@@ -3,15 +3,29 @@ use minidom::Element;
 use std::clone::Clone;
 use std::collections::HashSet;
 use std::ffi::OsStr;
-use std::io::BufRead;
-use std::io::BufWriter;
-use std::io::Write;
-use std::path::Path;
-use std::path::PathBuf;
+use std::io::{BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::path::{Path, PathBuf};
 
-const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-const DC: &str = "http://purl.org/dc/elements/1.1/";
-const LR: &str = "http://ns.adobe.com/lightroom/1.0/";
+pub const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+pub const DC: &str = "http://purl.org/dc/elements/1.1/";
+pub const LR: &str = "http://ns.adobe.com/lightroom/1.0/";
+
+// General namespaces used in xmp
+// xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+// xmlns:crd="http://ns.adobe.com/camera-raw-defaults/1.0/"
+// xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/"
+// xmlns:stCamera="http://ns.adobe.com/photoshop/1.0/camera-profile"
+// xmlns:crlcp="http://ns.adobe.com/camera-raw-embedded-lens-profile/1.0/"
+// xmlns:tiff="http://ns.adobe.com/tiff/1.0/"
+// xmlns:exif="http://ns.adobe.com/exif/1.0/"
+// xmlns:aux="http://ns.adobe.com/exif/1.0/aux/"
+// xmlns:exifEX="http://cipa.jp/exif/1.0/"
+// xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
+// xmlns:stEvt="http://ns.adobe.com/xap/1.0/sType/ResourceEvent#"
+// xmlns:dc="http://purl.org/dc/elements/1.1/"
+// xmlns:xmpRights="http://ns.adobe.com/xap/1.0/rights/"
+// xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+// xmlns:Iptc4xmpCore="http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/"
 
 const XMP_EXT: [&str; 1] = ["xmp"];
 const RAW_EXT: [&str; 37] = [
@@ -83,10 +97,12 @@ pub struct Results {
 impl Results {
     pub fn from_reader<R>(reader: R) -> Result<Self, XmpError>
     where
-        R: BufRead,
+        R: Read + Seek,
     {
-        let mut reader = quick_xml::Reader::from_reader(reader);
-        let xmpmeta: Element = Element::from_reader(&mut reader)?;
+        // let mut reader = quick_xml::Reader::from_reader(reader);
+
+        // let xmpmeta: Element = Element::from_reader(&mut reader)?;
+        let xmpmeta: Element = try_load_element(reader)?;
         let description = xmpmeta
             .get_child("RDF", RDF)
             .and_then(|rdf| rdf.get_child("Description", RDF))
@@ -160,12 +176,26 @@ pub struct UpdateResults {
 }
 
 impl UpdateResults {
-    pub fn update_xml<R>(&self, bytes: R, indent: bool) -> Result<Vec<u8>, XmpError>
+    pub fn update_xml<R>(&self, reader: R, indent: bool) -> Result<Vec<u8>, XmpError>
     where
-        R: BufRead,
+        R: Read + Seek,
     {
-        let mut reader = quick_xml::Reader::from_reader(bytes);
-        let mut xmpmeta: Element = Element::from_reader(&mut reader)?;
+        // let bfr = BufReader::new(&mut reader);
+        // let mut q_reader = quick_xml::Reader::from_reader(bfr);
+        // let mut xmpmeta: Element = match Element::from_reader(&mut q_reader) {
+        //     Ok(xmp) => xmp,
+        //     Err(e) => match e {
+        //         minidom::Error::MissingNamespace => {
+        //             // Since the bufreader has
+        //             let mut bfr = BufReader::new(&mut reader);
+        //             let buffer = add_ns(DC, &mut bfr)?;
+        //             let mut reader = quick_xml::Reader::from_reader(buffer.as_slice());
+        //             Element::from_reader(&mut reader)?
+        //         }
+        //         _ => return Err(e.into()),
+        //     },
+        // };
+        let mut xmpmeta = try_load_element(reader)?;
         let description = xmpmeta
             .get_child_mut("RDF", RDF)
             .and_then(|rdf| rdf.get_child_mut("Description", RDF))
@@ -263,12 +293,13 @@ impl UpdateResults {
         Ok(xml)
     }
 
-    pub fn from_reader<R>(bytes: R) -> Result<Self, XmpError>
+    pub fn from_reader<R>(reader: R) -> Result<Self, XmpError>
     where
-        R: BufRead,
+        R: Read + Seek,
     {
-        let mut reader = quick_xml::Reader::from_reader(bytes);
-        let xmpmeta: Element = Element::from_reader(&mut reader)?;
+        // let mut reader = quick_xml::Reader::from_reader(bytes);
+        // let xmpmeta: Element = Element::from_reader(&mut reader)?;
+        let xmpmeta: Element = try_load_element(reader)?;
         let description = xmpmeta
             .get_child("RDF", RDF)
             .and_then(|rdf| rdf.get_child("Description", RDF))
@@ -368,4 +399,60 @@ fn exists_with_extension(path: impl AsRef<Path>, ext: impl AsRef<OsStr>) -> Opti
     } else {
         None
     }
+}
+
+#[inline]
+fn add_ns(ns: &str, buffer: impl BufRead) -> Result<Vec<u8>, XmpError> {
+    use quick_xml::events::Event;
+
+    let mut reader = quick_xml::Reader::from_reader(buffer);
+    let mut writer = quick_xml::Writer::new(Vec::new());
+    let mut buf = Vec::new();
+    loop {
+        match reader.read_event(&mut buf) {
+            Ok(Event::Start(ref e)) if e.name() == b"rdf:Description" => {
+                let mut elem = e.clone();
+                elem.clear_attributes();
+                elem.extend_attributes(
+                    e.attributes()
+                        .map(|a| a.unwrap())
+                        .filter(|a| a.key != b"xmlns:dc")
+                        .into_iter(),
+                );
+                elem.push_attribute(("xmlns:dc", ns));
+                writer.write_event(Event::Start(elem))?
+            }
+            Ok(Event::Eof) => break,
+            Ok(elem) => writer.write_event(elem)?,
+            Err(e) => return Err(e.into()),
+        }
+        buf.clear();
+    }
+    Ok(writer.into_inner())
+}
+
+fn try_load_element<R>(mut reader: R) -> Result<minidom::Element, XmpError>
+where
+    R: Read + Seek,
+{
+    let bfr = BufReader::new(&mut reader);
+    let mut q_reader = quick_xml::Reader::from_reader(bfr);
+    let xmpmeta: Element = match Element::from_reader(&mut q_reader) {
+        Ok(xmp) => xmp,
+        Err(e) => match e {
+            minidom::Error::MissingNamespace => {
+                // Since the bufreader has
+                let mut bfr = BufReader::new(&mut reader);
+                bfr.seek(SeekFrom::Start(0))?;
+                let buffer = add_ns(DC, &mut bfr)?;
+                std::fs::write("new.xmp", &buffer).ok();
+                println!("buffer.len() {}", buffer.len());
+
+                let mut reader = quick_xml::Reader::from_reader(buffer.as_slice());
+                Element::from_reader(&mut reader)?
+            }
+            _ => return Err(e.into()),
+        },
+    };
+    Ok(xmpmeta)
 }
