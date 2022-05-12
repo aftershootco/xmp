@@ -445,9 +445,6 @@ where
                 let mut bfr = BufReader::new(&mut reader);
                 bfr.seek(SeekFrom::Start(0))?;
                 let buffer = add_ns(DC, &mut bfr)?;
-                std::fs::write("new.xmp", &buffer).ok();
-                println!("buffer.len() {}", buffer.len());
-
                 let mut reader = quick_xml::Reader::from_reader(buffer.as_slice());
                 Element::from_reader(&mut reader)?
             }
