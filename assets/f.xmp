@@ -70,6 +70,19 @@
 					<crs:Parameters crs:CameraProfile="DVLOP X" crs:CameraProfileDigest="E89FA237E9D4EF49C7F2A6F0A40F4BC0" crs:ConvertToGrayscale="False" crs:Exposure2012="+0.45" crs:ProcessVersion="11.0" crs:RGBTable="23E5F7A7B76177CCE79F84FAD06799D4" crs:Version="14.1"/>
 				</rdf:Description>
 			</crs:Look>
-        <dc:subject><rdf:Bag><rdf:li>World</rdf:li><rdf:li>AAA</rdf:li></rdf:Bag></dc:subject><lr:hierarchicalSubject><rdf:Bag><rdf:li>Some</rdf:li><rdf:li>stuff</rdf:li></rdf:Bag></lr:hierarchicalSubject></rdf:Description>
+        <dc:subject>
+                <rdf:Bag>
+                    <rdf:li>AAAAA</rdf:li>
+                    <rdf:li>World</rdf:li>
+                    <rdf:li>AA</rdf:li>
+                </rdf:Bag>
+            </dc:subject>
+            <lr:hierarchicalSubject>
+                <rdf:Bag>
+                    <rdf:li>Some</rdf:li>
+                    <rdf:li>stuff</rdf:li>
+                </rdf:Bag>
+            </lr:hierarchicalSubject>
+        </rdf:Description>
 	</rdf:RDF>
 </x:xmpmeta>

@@ -54,11 +54,18 @@ pub fn set_color() {
 #[test]
 pub fn set_subjects() {
     let x = UpdateResults {
-        subjects: Some(vec!["AAA".to_owned(), "World".to_owned()]),
+        subjects: Some(vec!["AAAAA".to_owned(), "World".to_owned()]),
         hierarchies: Some(vec!["Some".to_owned(), "stuff".to_owned()]),
         ..Default::default()
     };
-    UpdateResults::update(&x, "assets/f.xmp").unwrap();
+    x.write_to_with_options(
+        "assets/f.xmp",
+        UpdateOptions {
+            indent: Some((b' ', 4)),
+            overwrite: false,
+        },
+    )
+    .unwrap();
     println!("{:?}", OptionalResults::load("assets/f.xmp").unwrap());
 }
 
