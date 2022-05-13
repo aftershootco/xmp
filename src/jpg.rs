@@ -49,9 +49,14 @@ pub(crate) fn __jpeg_load_xml(path: impl AsRef<Path>) -> Result<Vec<u8>, XmpErro
 }
 
 impl UpdateResults {
-    pub fn update_jpg(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
+    pub fn update_jpg(
+        &self,
+        path: impl AsRef<Path>,
+        options: UpdateOptions,
+    ) -> Result<(), XmpError> {
         let xml = __jpeg_load_xml(&path).unwrap_or_else(|_e| DEFAULT_XML.as_bytes().to_vec());
-        let xml = self.update_xml(Cursor::new(xml), false)?;
+        // let xml = self.update_xml(Cursor::new(xml))?;
+        let xml = self.update_xml(Cursor::new(xml), options)?;
         let data = std::fs::read(&path)?;
         // let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(std::fs::read(&path)?.into())?;
         let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(data.into())?;

@@ -10,9 +10,13 @@ impl Results {
 }
 
 impl UpdateResults {
-    pub fn update_raw(&self, path: impl AsRef<Path>) -> Result<(), XmpError> {
+    pub fn update_raw(
+        &self,
+        path: impl AsRef<Path>,
+        options: UpdateOptions,
+    ) -> Result<(), XmpError> {
         let xml = self
-            .update_xml(BufReader::new(std::fs::File::open(&path)?), false)
+            .update_xml(BufReader::new(std::fs::File::open(&path)?), options)
             // .update_xml(std::fs::read(&path)?.as_slice(), false)
             .unwrap_or_else(|_e| DEFAULT_XML.as_bytes().to_vec());
 
@@ -50,7 +54,7 @@ pub fn set_color() {
 #[test]
 pub fn set_subjects() {
     let x = UpdateResults {
-        subjects: Some(vec!["HELLO".to_owned(), "World".to_owned()]),
+        subjects: Some(vec!["AAA".to_owned(), "World".to_owned()]),
         hierarchies: Some(vec!["Some".to_owned(), "stuff".to_owned()]),
         ..Default::default()
     };
