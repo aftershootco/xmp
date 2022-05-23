@@ -1,6 +1,6 @@
 [package]
 name = "xmp"
-version = "0.5.3"
+version = "0.6.0"
 edition = "2021"
 
 
@@ -16,8 +16,11 @@ thiserror = "1.0.31"
 img-parts = { version = "0.2.3", optional = true }
 jfifdump = { git = "https://github.com/aftershootco/jfifdump" , optional = true }
 kamadak-exif = { version = "0.5.4", optional = true }
+magic = { version = "0.12.2", optional = true }
 
 [features]
 jpeg = ["dep:jfifdump", "dep:kamadak-exif", "dep:img-parts"]
+png = ["dep:img-parts", "dep:kamadak-exif"]
 raw = []
-default = ["jpeg", "raw"]
+magic = ["dep:magic"]
+default = ["jpeg", "raw", "png"]

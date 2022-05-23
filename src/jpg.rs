@@ -5,13 +5,6 @@ use jfifdump::{Reader, SegmentKind};
 use std::io::BufReader;
 use std::io::Cursor;
 
-impl Results {
-    pub fn load_jpg(path: impl AsRef<Path>) -> Result<Self, XmpError> {
-        let data = Cursor::new(__jpeg_load_xml(path)?);
-        Self::from_reader(data)
-    }
-}
-
 pub(crate) fn __jpeg_load_xml(path: impl AsRef<Path>) -> Result<Vec<u8>, XmpError> {
     // First open a buffered reader
     // Check if the file has a exif header or a jfif header
@@ -46,6 +39,13 @@ pub(crate) fn __jpeg_load_xml(path: impl AsRef<Path>) -> Result<Vec<u8>, XmpErro
     }
 
     Err(XmpErrorKind::XMPMissing.into())
+}
+
+impl Results {
+    pub fn load_jpg(path: impl AsRef<Path>) -> Result<Self, XmpError> {
+        let data = Cursor::new(__jpeg_load_xml(path)?);
+        Self::from_reader(data)
+    }
 }
 
 impl UpdateResults {
@@ -116,8 +116,7 @@ impl UpdateResults {
 
 impl OptionalResults {
     pub fn load_jpg(path: impl AsRef<Path>) -> Result<Self, XmpError> {
-        let data = __jpeg_load_xml(path)?;
-        let data_cursor = Cursor::new(data.as_slice());
+        let data_cursor = Cursor::new(__jpeg_load_xml(path)?);
         Self::from_reader(data_cursor)
     }
 }

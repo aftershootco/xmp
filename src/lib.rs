@@ -33,9 +33,10 @@ const RAW_EXT: [&str; 37] = [
     "eip", "erf", "fff", "gpr", "mdc", "mef", "mos", "mrw", "nrw", "obm", "orf", "pef", "ptx",
     "pxn", "r3d", "raw", "rwl", "rw2", "rwz", "sr2", "srf", "srw", "x3f", "raf",
 ];
-const JPG_EXT: [&str; 9] = [
-    "jpg", "jpeg", "png", "heic", "avif", "heif", "tiff", "tif", "hif",
-];
+const JPG_EXT: [&str; 4] = ["jpg", "jpeg", "avif", "hif"];
+const PNG_EXT: [&str; 1] = ["png"];
+const HEIF_EXT: [&str; 2] = ["heic", "heif"];
+const TIFF_EXT: [&str; 2] = ["tiff", "tif"];
 
 #[macro_use]
 extern crate derive_builder;
@@ -46,6 +47,9 @@ mod jpg;
 #[cfg(feature = "raw")]
 mod raw;
 
+#[cfg(feature = "png")]
+mod png;
+
 const DEFAULT_XML: &str = include_str!("default.xmp");
 
 pub mod errors;
@@ -54,18 +58,19 @@ use errors::{XmpError, XmpErrorKind};
 mod traits;
 use traits::*;
 
+#[non_exhaustive]
 pub enum ImageType {
     Raw,
     Xmp,
     Jpg,
+    Png,
+    Tiff,
+    Heif,
     Others,
 }
 
-impl<T> From<T> for ImageType
-where
-    T: AsRef<Path>,
-{
-    fn from(p: T) -> Self {
+impl ImageType {
+    pub fn from_path(p: impl AsRef<Path>) -> Self {
         p.as_ref()
             .extension()
             .and_then(OsStr::to_str)
@@ -77,12 +82,24 @@ where
                     Self::Raw
                 } else if XMP_EXT.contains(&ext.as_str()) {
                     Self::Xmp
+                } else if PNG_EXT.contains(&ext.as_str()) {
+                    Self::Png
+                } else if TIFF_EXT.contains(&ext.as_str()) {
+                    Self::Tiff
+                } else if HEIF_EXT.contains(&ext.as_str()) {
+                    Self::Heif
                 } else {
                     Self::Others
                 }
             })
             .unwrap_or(Self::Others)
     }
+
+    // #[cfg(feature = "magic")]
+    // pub fn from_magic(p: impl AsRef<Path>) -> Self {
+    //     use magic::{Cookie, CookieFlags};
+    //     let cookie = magic::Cookie::open(CookieFlags::default()).unwrap();
+    // }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -155,9 +172,10 @@ impl Results {
 
     #[inline]
     pub fn load(path: impl AsRef<Path>) -> Result<Self, XmpError> {
-        let img_type = ImageType::from(&path);
+        let img_type = ImageType::from_path(&path);
         match img_type {
             ImageType::Jpg => Self::load_jpg(path),
+            // ImageType::Png => Self::load_png(path),
             ImageType::Raw => {
                 if let Some(path) = exists_with_extension(&path, "xmp") {
                     Self::load_raw(path)
@@ -167,7 +185,7 @@ impl Results {
                 }
             }
             ImageType::Xmp => Self::load_raw(path),
-            ImageType::Others => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
+            _ => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
         }
     }
 }
@@ -455,9 +473,10 @@ impl UpdateResults {
         path: impl AsRef<Path>,
         options: UpdateOptions,
     ) -> Result<(), XmpError> {
-        let img_type = ImageType::from(&path);
+        let img_type = ImageType::from_path(&path);
         match img_type {
             ImageType::Jpg => self.update_jpg(path, options),
+            ImageType::Png => self.update_png(path, options),
             ImageType::Raw => {
                 if let Some(path) = exists_with_extension(&path, "xmp") {
                     self.update_raw(path, options)
@@ -467,7 +486,7 @@ impl UpdateResults {
                 }
             }
             ImageType::Xmp => self.update_raw(path, options),
-            ImageType::Others => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
+            _ => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
         }
     }
     #[inline]
@@ -481,9 +500,10 @@ pub type OptionalResults = UpdateResults;
 impl OptionalResults {
     #[inline]
     pub fn load(path: impl AsRef<Path>) -> Result<Self, XmpError> {
-        let img_type = ImageType::from(&path);
+        let img_type = ImageType::from_path(&path);
         match img_type {
             ImageType::Jpg => OptionalResults::load_jpg(path),
+            ImageType::Png => OptionalResults::load_png(path),
             ImageType::Raw => {
                 if let Some(path) = exists_with_extension(&path, "xmp") {
                     OptionalResults::load_raw(path)
@@ -493,7 +513,7 @@ impl OptionalResults {
                 }
             }
             ImageType::Xmp => OptionalResults::load_raw(path),
-            ImageType::Others => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
+            _ => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
         }
     }
 }

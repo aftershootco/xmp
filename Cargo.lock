@@ -27,6 +27,12 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "bitflags"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aad18937a628ec6abcd26d1489012cc0e18c21798210f491af69ded9b881106d"
+
+[[package]]
+name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
@@ -63,7 +69,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "535434c063ced786eb04aaf529308092c5ab60889e8fe24275d15de07b01fa97"
 dependencies = [
  "atty",
- "bitflags",
+ "bitflags 1.3.2",
  "clap_lex",
  "indexmap",
  "lazy_static",
@@ -239,6 +245,26 @@ name = "libc"
 version = "0.2.125"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5916d2ae698f6de9bfb891ad7a8d65c09d232dc58cc4ac433c7da3b2fd84bc2b"
+
+[[package]]
+name = "magic"
+version = "0.12.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96f74caec41a12630bb8fd9546530a41addb720eb0c10593855f59ce96a779aa"
+dependencies = [
+ "bitflags 0.7.0",
+ "libc",
+ "magic-sys",
+]
+
+[[package]]
+name = "magic-sys"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8845491e44b9c377c9c361668c111c0655ebb75e10a8f06175a645f225f79661"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "memchr"
@@ -431,13 +457,14 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "xmp"
-version = "0.5.3"
+version = "0.6.0"
 dependencies = [
  "chrono",
  "derive_builder",
  "img-parts",
  "jfifdump",
  "kamadak-exif",
+ "magic",
  "minidom",
  "quick-xml",
  "thiserror",
