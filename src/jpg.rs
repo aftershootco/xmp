@@ -59,7 +59,8 @@ impl UpdateResults {
         let xml = self.update_xml(Cursor::new(xml), options)?;
         let data = std::fs::read(&path)?;
         // let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(std::fs::read(&path)?.into())?;
-        let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(data.into())?;
+        let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(data.into())
+            .map_err(|e| XmpError::from(e).with_name(path.as_ref()))?;
         // Do not overwrite the existing exif data
         let mut exifwriter = exif::experimental::Writer::new();
 
@@ -85,10 +86,14 @@ impl UpdateResults {
                 }
             }
             exifwriter.push_field(&exif_xml_tag);
-            exifwriter.write(&mut exif_data, false)?;
+            exifwriter
+                .write(&mut exif_data, false)
+                .map_err(|e| XmpError::from(e).with_name(path.as_ref()))?;
         } else {
             exifwriter.push_field(&exif_xml_tag);
-            exifwriter.write(&mut exif_data, false)?;
+            exifwriter
+                .write(&mut exif_data, false)
+                .map_err(|e| XmpError::from(e).with_name(path.as_ref()))?;
         }
 
         let exif_data = exif_data.into_inner();
@@ -99,7 +104,9 @@ impl UpdateResults {
         let mut bfw = BufWriter::new(std::fs::File::create(&temp)?);
 
         // This might cause panics
-        jpeg.encoder().write_to(&mut bfw)?;
+        jpeg.encoder()
+            .write_to(&mut bfw)
+            .map_err(|e| XmpError::from(e).with_name(path.as_ref()))?;
         bfw.flush()?;
         std::fs::rename(temp, path)?;
 
