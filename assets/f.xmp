@@ -72,8 +72,8 @@
 			</crs:Look>
         <dc:subject>
                 <rdf:Bag>
-                    <rdf:li>AAAAA</rdf:li>
                     <rdf:li>World</rdf:li>
+                    <rdf:li>AAAAA</rdf:li>
                     <rdf:li>AA</rdf:li>
                 </rdf:Bag>
             </dc:subject>
