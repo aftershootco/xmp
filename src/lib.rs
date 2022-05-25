@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 pub const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 pub const DC: &str = "http://purl.org/dc/elements/1.1/";
 pub const LR: &str = "http://ns.adobe.com/lightroom/1.0/";
+pub const EXIF: &str = "http://ns.adobe.com/exif/1.0/";
 
 // General namespaces used in xmp
 // xmlns:xmp="http://ns.adobe.com/xap/1.0/"
@@ -132,6 +133,11 @@ impl Results {
             .otor(|| XmpErrorKind::ChildNotFound)?;
 
         let mut results_builder = ResultsBuilder::default();
+        if let Some(v) = description.get_child("DateTimeOriginal", EXIF) {
+            results_builder.datetime = chrono::DateTime::parse_from_rfc3339(&v.text())
+                .map(|d| d.timestamp())
+                .ok();
+        }
         description.attrs().for_each(|attr| match attr {
             ("xmp:Label", v) => {
                 results_builder.colors(v.to_owned());
@@ -429,6 +435,14 @@ impl UpdateResults {
         results_builder.datetime(None);
         results_builder.subjects(None);
         results_builder.hierarchies(None);
+
+        if let Some(v) = description.get_child("DateTimeOriginal", EXIF) {
+            results_builder.datetime(
+                chrono::DateTime::parse_from_rfc3339(&v.text())
+                    .map(|d| d.timestamp())
+                    .ok(),
+            );
+        }
         description.attrs().for_each(|attr| match attr {
             ("xmp:Label", v) => {
                 results_builder.colors(Some(v.to_owned()));
