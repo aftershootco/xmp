@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 pub const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 pub const DC: &str = "http://purl.org/dc/elements/1.1/";
 pub const LR: &str = "http://ns.adobe.com/lightroom/1.0/";
+pub const XMP: &str = "http://ns.adobe.com/xap/1.0/";
 pub const EXIF: &str = "http://ns.adobe.com/exif/1.0/";
 
 // General namespaces used in xmp
@@ -208,13 +209,15 @@ pub struct UpdateResults {
 impl UpdateResults {
     pub fn update_xml<R>(&self, reader: R, options: UpdateOptions) -> Result<Vec<u8>, XmpError>
     where
-        R: Read + Seek,
+        R: BufRead + Seek,
     {
         let mut xmpmeta = try_load_element(reader)?;
         let description = xmpmeta
             .get_child_mut("RDF", RDF)
             .and_then(|rdf| rdf.get_child_mut("Description", RDF))
             .otor(|| XmpErrorKind::ChildNotFound)?;
+
+        description.add_prefixes([("xmp", XMP), ("exif", EXIF)])?;
 
         if let Some(stars) = self.stars {
             description.set_attr("xmp:Rating", stars)
@@ -225,11 +228,15 @@ impl UpdateResults {
 
         if let Some(datetime) = self.datetime {
             let datetime =
-                DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(datetime, 0), Utc)
-                    .to_rfc3339();
-            description.set_attr("xmp:CreateDate", &datetime);
-            description.set_attr("exif:DateTimeOriginal", datetime);
+                DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(datetime, 0), Utc);
+            // description.set_attr("xmp:CreateDate", &datetime.to_rfc3339()); // Don't save
+            // capture time in this
+            if description.has_child("DateTimeOriginal", EXIF) {
+                description.remove_child("DateTimeOriginal", EXIF);
+            }
+            description.set_attr("exif:DateTimeOriginal", &datetime.to_rfc3339());
         }
+
         if let Some(ref subjects) = self.subjects {
             let subjects: HashSet<String> = subjects.iter().cloned().collect();
             if let Some(bag) = description
@@ -317,109 +324,9 @@ impl UpdateResults {
         Ok(xml)
     }
 
-    pub fn update_xml_options<R>(&self, reader: R, indent: bool) -> Result<Vec<u8>, XmpError>
-    where
-        R: Read + Seek,
-    {
-        let mut xmpmeta = try_load_element(reader)?;
-        let description = xmpmeta
-            .get_child_mut("RDF", RDF)
-            .and_then(|rdf| rdf.get_child_mut("Description", RDF))
-            .otor(|| XmpErrorKind::ChildNotFound)?;
-
-        if let Some(stars) = self.stars {
-            description.set_attr("xmp:Rating", stars)
-        }
-        if let Some(colors) = &self.colors {
-            description.set_attr("xmp:Label", colors)
-        }
-
-        if let Some(datetime) = self.datetime {
-            let datetime =
-                DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(datetime, 0), Utc)
-                    .to_rfc3339();
-            description.set_attr("xmp:CreateDate", &datetime);
-            description.set_attr("exif:DateTimeOriginal", datetime);
-        }
-        if let Some(ref subjects) = self.subjects {
-            let subjects: HashSet<String> = subjects.iter().cloned().collect();
-            if let Some(bag) = description
-                .get_child_mut("subject", DC)
-                .and_then(|subjects| subjects.get_child_mut("Bag", RDF))
-            {
-                let existing: HashSet<String> = bag
-                    .children()
-                    .filter(|ch| ch.is("li", RDF))
-                    .map(|li| li.text())
-                    .collect();
-                if existing != subjects {
-                    let list: Vec<Element> = subjects
-                        .iter()
-                        .map(|s| Element::builder("li", RDF).append(s.as_str()).build())
-                        .collect();
-
-                    *bag = Element::builder("Bag", RDF).append_all(list).build();
-                }
-            } else {
-                let subjects: Vec<Element> = subjects
-                    .iter()
-                    .map(|s| Element::builder("li", RDF).append(s.as_str()).build())
-                    .collect();
-                let dc_subjects = Element::builder("subject", DC)
-                    .append(Element::builder("Bag", RDF).append_all(subjects).build())
-                    .build();
-                description.remove_child("subject", DC);
-                description.append_child(dc_subjects);
-            }
-        }
-        if let Some(ref hierarchies) = self.hierarchies {
-            let hierarchies: HashSet<String> = hierarchies.iter().cloned().collect();
-            if let Some(bag) = description
-                .get_child_mut("hierarchicalSubject", LR)
-                .and_then(|hierarchy| hierarchy.get_child_mut("Bag", RDF))
-            {
-                let existing: HashSet<String> = bag
-                    .children()
-                    .filter(|ch| ch.is("li", RDF))
-                    .map(|li| li.text())
-                    .collect();
-                // Only update if the new is not the same as the existing
-                if existing != hierarchies {
-                    let list: Vec<Element> = hierarchies
-                        .iter()
-                        .map(|s| Element::builder("li", RDF).append(s.as_str()).build())
-                        .collect();
-                    *bag = Element::builder("Bag", RDF)
-                        .append_all(bag.children().cloned().collect::<Vec<Element>>())
-                        .append_all(list)
-                        .build()
-                }
-            } else {
-                let hierarchies: Vec<Element> = hierarchies
-                    .iter()
-                    .map(|s| Element::builder("li", RDF).append(s.as_str()).build())
-                    .collect();
-                let lr_hierarchicalsubjects = Element::builder("hierarchicalSubject", LR)
-                    .append(Element::builder("Bag", RDF).append_all(hierarchies).build())
-                    .build();
-                description.remove_child("hierarchicalSubject", LR);
-                description.append_child(lr_hierarchicalsubjects);
-            }
-        }
-
-        let mut xml = Vec::new();
-        if indent {
-            let mut qwriter = quick_xml::Writer::new_with_indent(&mut xml, b' ', 4);
-            xmpmeta.to_writer(&mut qwriter)?;
-        } else {
-            xmpmeta.write_to(&mut xml)?;
-        }
-        Ok(xml)
-    }
-
     pub fn from_reader<R>(reader: R) -> Result<Self, XmpError>
     where
-        R: Read + Seek,
+        R: BufRead + Seek,
     {
         // let mut reader = quick_xml::Reader::from_reader(bytes);
         // let xmpmeta: Element = Element::from_reader(&mut reader)?;
@@ -452,11 +359,15 @@ impl UpdateResults {
             }
             ("xmp:CreateDate", v) => {
                 let datetime = chrono::DateTime::parse_from_rfc3339(v).map(|d| d.timestamp());
-                results_builder.datetime(datetime.ok());
+                if datetime.is_ok() && results_builder.datetime.is_none() {
+                    results_builder.datetime(datetime.ok());
+                }
             }
             ("exif:DateTimeOriginal", v) => {
-                let datetime = chrono::DateTime::parse_from_rfc3339(v).map(|d| d.timestamp());
-                results_builder.datetime(datetime.ok());
+                if let Ok(datetime) = chrono::DateTime::parse_from_rfc3339(v).map(|d| d.timestamp())
+                {
+                    results_builder.datetime(Some(datetime));
+                }
             }
             _ => (),
         });

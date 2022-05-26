@@ -1,26 +1,26 @@
 [package]
 name = "xmp"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = "0.4.19"
 derive_builder = "0.11.2"
-minidom = "0.14.0"
-quick-xml = "0.22.0"
 thiserror = "1.0.31"
 
+chrono = "0.4.19"
+quick-xml = "0.22.0"
+
+minidom = { path = "minidom" }
+
+kamadak-exif = { version = "0.5.4", optional = true }
 img-parts = { version = "0.2.3", optional = true }
 jfifdump = { git = "https://github.com/aftershootco/jfifdump" , optional = true }
-kamadak-exif = { version = "0.5.4", optional = true }
-magic = { version = "0.12.2", optional = true }
 
 [features]
 jpeg = ["dep:jfifdump", "dep:kamadak-exif", "dep:img-parts"]
 png = ["dep:img-parts", "dep:kamadak-exif"]
 raw = []
-magic = ["dep:magic"]
 default = ["jpeg", "raw", "png"]

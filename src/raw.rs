@@ -47,8 +47,8 @@ pub fn set_color() {
         colors: Some(String::from("Blue")),
         ..Default::default()
     };
-    UpdateResults::update(&x, "assets/f.xmp").unwrap();
-    println!("{:?}", Results::load("assets/f.xmp").unwrap());
+    x.update("assets/f.xmp").unwrap();
+    println!("{:?}", OptionalResults::load("assets/f.xmp").unwrap());
 }
 
 #[test]

@@ -165,7 +165,7 @@ pub fn test_jpeg_exif_load_updated() {
     let e = OptionalResults {
         stars: Some(3),
         colors: Some(String::from("Blue")),
-        datetime: Some(1633790597),
+        datetime: Some(1690139150),
         subjects: Some(
             vec!["Duplicates", "Selected"]
                 .iter()
