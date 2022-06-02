@@ -89,6 +89,11 @@ impl std::fmt::Debug for XmpError {
 
 impl std::error::Error for XmpError {}
 
+impl XmpError {
+    pub fn kind(&self) -> &XmpErrorKind {
+        &self.inner
+    }
+}
 impl<T: 'static> From<T> for XmpError
 where
     T: Into<XmpErrorKind> + std::error::Error,
