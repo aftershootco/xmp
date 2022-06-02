@@ -6,6 +6,8 @@ use std::ffi::OsStr;
 use std::io::{BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
+// mod namespaces;
+
 pub const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 pub const DC: &str = "http://purl.org/dc/elements/1.1/";
 pub const LR: &str = "http://ns.adobe.com/lightroom/1.0/";

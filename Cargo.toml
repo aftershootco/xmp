@@ -1,6 +1,6 @@
 [package]
 name = "xmp"
-version = "0.7.0"
+version = "0.7.1"
 edition = "2021"
 
 
@@ -24,3 +24,14 @@ jpeg = ["dep:jfifdump", "dep:kamadak-exif", "dep:img-parts"]
 png = ["dep:img-parts", "dep:kamadak-exif"]
 raw = []
 default = ["jpeg", "raw", "png"]
+
+[dev-dependencies]
+criterion = { version = "0.3.5", default-features = false }
+
+[[bench]]
+name = "read"
+harness = false
+
+[[bench]]
+name = "write"
+harness = false
