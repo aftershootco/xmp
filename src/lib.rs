@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 
 pub const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 pub const DC: &str = "http://purl.org/dc/elements/1.1/";
+pub const TIFF: &str = "http://ns.adobe.com/tiff/1.0/";
 pub const LR: &str = "http://ns.adobe.com/lightroom/1.0/";
 pub const XMP: &str = "http://ns.adobe.com/xap/1.0/";
 pub const EXIF: &str = "http://ns.adobe.com/exif/1.0/";
@@ -206,6 +207,7 @@ pub struct UpdateResults {
     pub datetime: Option<i64>,
     pub subjects: Option<Vec<String>>,
     pub hierarchies: Option<Vec<String>>,
+    pub orientation: Option<usize>,
 }
 
 impl UpdateResults {
@@ -344,6 +346,7 @@ impl UpdateResults {
         results_builder.datetime(None);
         results_builder.subjects(None);
         results_builder.hierarchies(None);
+        results_builder.orientation(None);
 
         if let Some(v) = description.get_child("DateTimeOriginal", EXIF) {
             results_builder.datetime(
@@ -371,6 +374,9 @@ impl UpdateResults {
                     results_builder.datetime(Some(datetime));
                 }
             }
+            ("tiff:Orientation", v) => {
+                results_builder.orientation(v.parse().ok());
+            }
             _ => (),
         });
         let subjects = description
@@ -379,6 +385,13 @@ impl UpdateResults {
             .map(|bag| bag.children().map(|li| li.text()).collect::<Vec<String>>());
 
         results_builder.subjects(subjects);
+
+        if let Some(o) = description
+            .get_child("Orientation", TIFF)
+            .and_then(|o| o.text().parse().ok())
+        {
+            results_builder.orientation(Some(o));
+        };
 
         let hierarchies = description
             .get_child("hierarchicalSubject", LR)
