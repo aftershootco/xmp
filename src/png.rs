@@ -57,10 +57,3 @@ impl OptionalResults {
         Self::from_reader(data)
     }
 }
-
-impl Results {
-    pub fn load_png(path: impl AsRef<Path>) -> Result<Self, XmpError> {
-        let data = Cursor::new(__png_load_xml(path)?);
-        Self::from_reader(data)
-    }
-}

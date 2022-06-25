@@ -24,8 +24,8 @@ pub enum XmpErrorKind {
     MinidomError(#[from] minidom::Error),
     #[error("{0}")]
     IoError(#[from] std::io::Error),
-    #[error("{0}")]
-    RequestBuilderError(#[from] crate::ResultsBuilderError),
+    // #[error("{0}")]
+    // RequestBuilderError(#[from] crate::ResultsBuilderError),
     #[error("{0}")]
     OptionlRequestBuilderError(#[from] crate::UpdateResultsBuilderError),
     #[error("{0}")]
@@ -47,6 +47,10 @@ pub enum XmpErrorKind {
     #[cfg(feature = "jpeg")]
     #[error("{0}")]
     ExifError(#[from] exif::Error),
+
+    #[cfg(feature = "raw")]
+    #[error("{0}")]
+    LibrawError(#[from] libraw_r::LibrawError),
 }
 
 impl std::fmt::Display for XmpError {

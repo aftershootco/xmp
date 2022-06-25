@@ -55,6 +55,8 @@ mod raw;
 #[cfg(feature = "png")]
 mod png;
 
+mod xml;
+
 const DEFAULT_XML: &str = include_str!("default.xmp");
 
 pub mod errors;
@@ -64,6 +66,7 @@ mod traits;
 use traits::*;
 
 #[non_exhaustive]
+#[derive(Debug, Clone)]
 pub enum ImageType {
     Raw,
     Xmp,
@@ -111,93 +114,6 @@ impl ImageType {
 pub struct UpdateOptions {
     indent: Option<(u8, usize)>,
     overwrite: bool,
-}
-
-#[derive(Debug, Builder, Default, PartialEq)]
-pub struct Results {
-    pub stars: u8,
-    pub colors: String,
-    pub datetime: i64,
-    pub subjects: Vec<String>,
-    pub hierarchies: Vec<String>,
-}
-
-impl Results {
-    pub fn from_reader<R>(reader: R) -> Result<Self, XmpError>
-    where
-        R: Read + Seek,
-    {
-        // let mut reader = quick_xml::Reader::from_reader(reader);
-
-        // let xmpmeta: Element = Element::from_reader(&mut reader)?;
-        let xmpmeta: Element = try_load_element(reader)?;
-        let description = xmpmeta
-            .get_child("RDF", RDF)
-            .and_then(|rdf| rdf.get_child("Description", RDF))
-            .otor(|| XmpErrorKind::ChildNotFound)?;
-
-        let mut results_builder = ResultsBuilder::default();
-        if let Some(v) = description.get_child("DateTimeOriginal", EXIF) {
-            results_builder.datetime = chrono::DateTime::parse_from_rfc3339(&v.text())
-                .map(|d| d.timestamp())
-                .ok();
-        }
-        description.attrs().for_each(|attr| match attr {
-            ("xmp:Label", v) => {
-                results_builder.colors(v.to_owned());
-            }
-            ("xmp:Rating", v) => {
-                results_builder.stars(v.parse().unwrap_or(0));
-            }
-            ("xmp:CreateDate", v) => {
-                let datetime = chrono::DateTime::parse_from_rfc3339(v)
-                    .map(|d| d.timestamp())
-                    .unwrap_or(0);
-                results_builder.datetime(datetime);
-            }
-            ("exif:DateTimeOriginal", v) => {
-                let datetime = chrono::DateTime::parse_from_rfc3339(v)
-                    .map(|d| d.timestamp())
-                    .unwrap_or(0);
-                results_builder.datetime(datetime);
-            }
-            _ => (),
-        });
-        let subjects = description
-            .get_child("subject", DC)
-            .and_then(|subject| subject.get_child("Bag", RDF))
-            .map(|bag| bag.children().map(|li| li.text()).collect::<Vec<String>>())
-            .otor(|| XmpErrorKind::ChildNotFound)?;
-        results_builder.subjects(subjects);
-
-        let hierarchies = description
-            .get_child("hierarchicalSubject", LR)
-            .and_then(|hierarchies| hierarchies.get_child("Bag", RDF))
-            .map(|bag| bag.children().map(|li| li.text()).collect::<Vec<String>>())
-            .otor(|| XmpErrorKind::ChildNotFound)?;
-        results_builder.hierarchies(hierarchies);
-
-        Ok(results_builder.build()?)
-    }
-
-    #[inline]
-    pub fn load(path: impl AsRef<Path>) -> Result<Self, XmpError> {
-        let img_type = ImageType::from_path(&path);
-        match img_type {
-            ImageType::Jpg => Self::load_jpg(path),
-            // ImageType::Png => Self::load_png(path),
-            ImageType::Raw => {
-                if let Some(path) = exists_with_extension(&path, "xmp") {
-                    Self::load_raw(path)
-                } else {
-                    eprintln!("\x1b[31mRaw files not supported and xmp file not found\x1b[0m");
-                    Err(XmpError::from(XmpErrorKind::InvalidFileType))
-                }
-            }
-            ImageType::Xmp => Self::load_raw(path),
-            _ => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
-        }
-    }
 }
 
 #[derive(Debug, Default, Builder, PartialEq)]
@@ -364,7 +280,12 @@ impl UpdateResults {
             }
             ("xmp:CreateDate", v) => {
                 let datetime = chrono::DateTime::parse_from_rfc3339(v).map(|d| d.timestamp());
-                if datetime.is_ok() && results_builder.datetime.is_none() {
+                if datetime.is_ok()
+                    && results_builder
+                        .datetime
+                        .map(|d| d.is_none())
+                        .unwrap_or_default()
+                {
                     results_builder.datetime(datetime.ok());
                 }
             }
@@ -419,13 +340,13 @@ impl UpdateResults {
             ImageType::Png => self.update_png(path, options),
             ImageType::Raw => {
                 if let Some(path) = exists_with_extension(&path, "xmp") {
-                    self.update_raw(path, options)
+                    self.update_xmp(path, options)
                 } else {
                     eprintln!("\x1b[31mRaw files not supported and xmp file not found\x1b[0m");
                     Err(XmpError::from(XmpErrorKind::InvalidFileType))
                 }
             }
-            ImageType::Xmp => self.update_raw(path, options),
+            ImageType::Xmp => self.update_xmp(path, options),
             _ => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
         }
     }
@@ -442,17 +363,16 @@ impl OptionalResults {
     pub fn load(path: impl AsRef<Path>) -> Result<Self, XmpError> {
         let img_type = ImageType::from_path(&path);
         match img_type {
+            ImageType::Xmp => OptionalResults::load_xmp(path),
             ImageType::Jpg => OptionalResults::load_jpg(path),
             ImageType::Png => OptionalResults::load_png(path),
             ImageType::Raw => {
                 if let Some(path) = exists_with_extension(&path, "xmp") {
-                    OptionalResults::load_raw(path)
+                    OptionalResults::load_xmp(path)
                 } else {
-                    eprintln!("\x1b[31mRaw files not supported and xmp file not found\x1b[0m");
-                    Err(XmpError::from(XmpErrorKind::InvalidFileType))
+                    OptionalResults::load_raw(path)
                 }
             }
-            ImageType::Xmp => OptionalResults::load_raw(path),
             _ => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
         }
     }
@@ -460,13 +380,7 @@ impl OptionalResults {
 
 #[inline]
 fn exists_with_extension(path: impl AsRef<Path>, ext: impl AsRef<OsStr>) -> Option<PathBuf> {
-    let new_path = path.as_ref().with_extension(ext);
-    // println!("{:?}", path);
-    if new_path.exists() && new_path == path.as_ref().to_path_buf() {
-        std::fs::canonicalize(path).ok()
-    } else {
-        None
-    }
+    path.as_ref().with_extension(ext).canonicalize().ok()
 }
 
 #[inline]
