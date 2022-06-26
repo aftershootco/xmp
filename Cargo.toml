@@ -18,7 +18,7 @@ minidom = { path = "minidom" }
 kamadak-exif = { version = "0.5.4", optional = true }
 img-parts = { version = "0.2.3", optional = true }
 jfifdump = { git = "https://github.com/aftershootco/jfifdump" , optional = true }
-libraw_r = { git = "https://github.com/aftershootco/libraw-rs", optional = true }
+libraw_r = { git = "https://github.com/aftershootco/libraw-rs", default-features=false, optional = true }
 
 [features]
 jpeg = ["dep:jfifdump", "dep:kamadak-exif", "dep:img-parts"]
