@@ -1,6 +1,6 @@
 [package]
 name = "xmp"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2021"
 
 
@@ -18,7 +18,8 @@ minidom = { path = "minidom" }
 kamadak-exif = { version = "0.5.4", optional = true }
 img-parts = { version = "0.2.3", optional = true }
 jfifdump = { git = "https://github.com/aftershootco/jfifdump" , optional = true }
-libraw_r = { git = "https://github.com/aftershootco/libraw-rs", default-features=false, optional = true }
+libraw_r = { git = "https://github.com/aftershootco/libraw-rs", default-features = false, optional = true }
+iso8601 = "0.4.2"
 
 [features]
 jpeg = ["dep:jfifdump", "dep:kamadak-exif", "dep:img-parts"]

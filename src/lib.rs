@@ -55,6 +55,7 @@ mod raw;
 #[cfg(feature = "png")]
 mod png;
 
+mod time;
 mod xml;
 
 const DEFAULT_XML: &str = include_str!("default.xmp");
@@ -265,11 +266,7 @@ impl UpdateResults {
         results_builder.orientation(None);
 
         if let Some(v) = description.get_child("DateTimeOriginal", EXIF) {
-            results_builder.datetime(
-                chrono::DateTime::parse_from_rfc3339(&v.text())
-                    .map(|d| d.timestamp())
-                    .ok(),
-            );
+            results_builder.datetime(crate::time::timestamp(&v.text()));
         }
         description.attrs().for_each(|attr| match attr {
             ("xmp:Label", v) => {
@@ -279,19 +276,18 @@ impl UpdateResults {
                 results_builder.stars(v.parse().ok());
             }
             ("xmp:CreateDate", v) => {
-                let datetime = chrono::DateTime::parse_from_rfc3339(v).map(|d| d.timestamp());
-                if datetime.is_ok()
+                let datetime = crate::time::timestamp(v);
+                if datetime.is_some()
                     && results_builder
                         .datetime
                         .map(|d| d.is_none())
-                        .unwrap_or_default()
+                        .unwrap_or(false)
                 {
-                    results_builder.datetime(datetime.ok());
+                    results_builder.datetime(datetime);
                 }
             }
             ("exif:DateTimeOriginal", v) => {
-                if let Ok(datetime) = chrono::DateTime::parse_from_rfc3339(v).map(|d| d.timestamp())
-                {
+                if let Some(datetime) = crate::time::timestamp(v) {
                     results_builder.datetime(Some(datetime));
                 }
             }
