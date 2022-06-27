@@ -55,7 +55,7 @@ mod raw;
 #[cfg(feature = "png")]
 mod png;
 
-mod time;
+pub mod time;
 mod xml;
 
 const DEFAULT_XML: &str = include_str!("default.xmp");
