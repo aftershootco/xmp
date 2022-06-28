@@ -67,6 +67,7 @@ pub fn missing_namespace() {
         stars: Some(3),
         datetime: Some(1651333056),
         orientation: Some(1),
+        offset: Some(-4 * 3600),
         ..Default::default()
     };
     let r = OptionalResults::load("assets/missing_ns.xmp").unwrap();

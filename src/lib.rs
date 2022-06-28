@@ -121,10 +121,13 @@ pub struct UpdateOptions {
 pub struct UpdateResults {
     pub stars: Option<u8>,
     pub colors: Option<String>,
+    /// Should always be utc
     pub datetime: Option<i64>,
     pub subjects: Option<Vec<String>>,
     pub hierarchies: Option<Vec<String>>,
     pub orientation: Option<usize>,
+    /// Should be +-seconds based on whether the offset was specified
+    pub offset: Option<i64>,
 }
 
 impl UpdateResults {
@@ -148,10 +151,17 @@ impl UpdateResults {
         }
 
         if let Some(datetime) = self.datetime {
+            let offset = if let Some(offset) = self.offset {
+                chrono::FixedOffset::east_opt(offset as i32)
+                    .unwrap_or_else(|| chrono::FixedOffset::east(0))
+            } else {
+                chrono::FixedOffset::east(0)
+            };
+
             let datetime =
-                DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(datetime, 0), Utc);
-            // description.set_attr("xmp:CreateDate", &datetime.to_rfc3339()); // Don't save
-            // capture time in this
+                DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(datetime, 0), Utc)
+                    .with_timezone(&offset);
+
             if description.has_child("DateTimeOriginal", EXIF) {
                 description.remove_child("DateTimeOriginal", EXIF);
             }
@@ -264,9 +274,14 @@ impl UpdateResults {
         results_builder.subjects(None);
         results_builder.hierarchies(None);
         results_builder.orientation(None);
+        results_builder.offset(None);
 
         if let Some(v) = description.get_child("DateTimeOriginal", EXIF) {
-            results_builder.datetime(crate::time::timestamp(&v.text()));
+            // results_builder.datetime(crate::time::timestamp(&v.text()));
+            let t = crate::time::timestamp_offset(&v.text());
+
+            results_builder.datetime(t.map(|d| d.0));
+            results_builder.offset(t.and_then(|d| d.1));
         }
         description.attrs().for_each(|attr| match attr {
             ("xmp:Label", v) => {
@@ -276,19 +291,21 @@ impl UpdateResults {
                 results_builder.stars(v.parse().ok());
             }
             ("xmp:CreateDate", v) => {
-                let datetime = crate::time::timestamp(v);
+                let datetime = crate::time::timestamp_offset(v);
                 if datetime.is_some()
                     && results_builder
                         .datetime
                         .map(|d| d.is_none())
                         .unwrap_or(false)
                 {
-                    results_builder.datetime(datetime);
+                    results_builder.datetime(datetime.map(|d| d.0));
+                    results_builder.offset(datetime.and_then(|d| d.1));
                 }
             }
             ("exif:DateTimeOriginal", v) => {
-                if let Some(datetime) = crate::time::timestamp(v) {
-                    results_builder.datetime(Some(datetime));
+                if let Some(datetime) = crate::time::timestamp_offset(v) {
+                    results_builder.datetime(Some(datetime.0));
+                    results_builder.offset(datetime.1);
                 }
             }
             ("tiff:Orientation", v) => {

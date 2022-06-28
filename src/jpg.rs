@@ -168,6 +168,7 @@ pub fn test_jpeg_exif_load_updated() {
         ),
         orientation: None,
         hierarchies: Some(vec!["Duplicates"].iter().map(ToString::to_string).collect()),
+        offset: None,
     };
     assert_eq!(r_2, e);
 
