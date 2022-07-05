@@ -67,7 +67,7 @@ mod traits;
 use traits::*;
 
 #[non_exhaustive]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ImageType {
     Raw,
     Xmp,
@@ -136,6 +136,7 @@ impl UpdateResults {
         R: BufRead + Seek,
     {
         let mut xmpmeta = try_load_element(reader)?;
+
         let description = xmpmeta
             .get_child_mut("RDF", RDF)
             .and_then(|rdf| rdf.get_child_mut("Description", RDF))
@@ -267,6 +268,7 @@ impl UpdateResults {
             .and_then(|rdf| rdf.get_child("Description", RDF))
             .otor(|| XmpErrorKind::ChildNotFound)?;
 
+
         let mut results_builder = UpdateResultsBuilder::default();
         results_builder.colors(None);
         results_builder.stars(None);
@@ -282,6 +284,18 @@ impl UpdateResults {
 
             results_builder.datetime(t.map(|d| d.0));
             results_builder.offset(t.and_then(|d| d.1));
+        }
+        if let Some(v) = description.get_child("CreateDate", XMP) {
+            let datetime = crate::time::timestamp_offset(v.text());
+            if datetime.is_some()
+                && results_builder
+                    .datetime
+                    .map(|d| d.is_none())
+                    .unwrap_or(false)
+            {
+                results_builder.datetime(datetime.map(|d| d.0));
+                results_builder.offset(datetime.and_then(|d| d.1));
+            }
         }
         description.attrs().for_each(|attr| match attr {
             ("xmp:Label", v) => {
