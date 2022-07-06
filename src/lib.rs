@@ -462,7 +462,7 @@ fn add_ns(ns: &str, buffer: impl BufRead) -> Result<Vec<u8>, XmpError> {
     Ok(writer.into_inner())
 }
 
-fn try_load_element<R>(mut reader: R) -> Result<minidom::Element, XmpError>
+pub fn try_load_element<R>(mut reader: R) -> Result<minidom::Element, XmpError>
 where
     R: Read + Seek,
 {
