@@ -309,8 +309,6 @@ impl UpdateResults {
             .and_then(|rdf| rdf.get_child("Description", RDF))
             .otor(|| XmpErrorKind::ChildNotFound)?;
 
-        // dbg!(try_get_item(description, EXIF_DATETIMEORIGINAL));
-
         let mut results_builder = UpdateResultsBuilder::default();
         results_builder.colors(None);
         results_builder.stars(None);
@@ -496,4 +494,11 @@ pub fn try_get_item(element: &Element, item: XmpItem) -> Result<String, XmpError
             format!("Failed to get Item {}", item.attr_name()),
         ))?
     }
+}
+
+pub fn try_get_description(element: &Element) -> Result<&Element, XmpError> {
+    Ok(element
+        .get_child("RDF", RDF)
+        .and_then(|rdf| rdf.get_child("Description", RDF))
+        .otor(|| XmpErrorKind::ChildNotFound)?)
 }
