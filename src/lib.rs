@@ -6,8 +6,22 @@ use std::ffi::OsStr;
 use std::io::{BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
-// mod namespaces;
-
+// General namespaces used in xmp
+// xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+// xmlns:crd="http://ns.adobe.com/camera-raw-defaults/1.0/"
+// xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/"
+// xmlns:stCamera="http://ns.adobe.com/photoshop/1.0/camera-profile"
+// xmlns:crlcp="http://ns.adobe.com/camera-raw-embedded-lens-profile/1.0/"
+// xmlns:tiff="http://ns.adobe.com/tiff/1.0/"
+// xmlns:exif="http://ns.adobe.com/exif/1.0/"
+// xmlns:aux="http://ns.adobe.com/exif/1.0/aux/"
+// xmlns:exifEX="http://cipa.jp/exif/1.0/"
+// xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
+// xmlns:stEvt="http://ns.adobe.com/xap/1.0/sType/ResourceEvent#"
+// xmlns:dc="http://purl.org/dc/elements/1.1/"
+// xmlns:xmpRights="http://ns.adobe.com/xap/1.0/rights/"
+// xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+// xmlns:Iptc4xmpCore="http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/"
 pub const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 pub const DC: &str = "http://purl.org/dc/elements/1.1/";
 pub const TIFF: &str = "http://ns.adobe.com/tiff/1.0/";
@@ -15,6 +29,14 @@ pub const LR: &str = "http://ns.adobe.com/lightroom/1.0/";
 pub const XMP: &str = "http://ns.adobe.com/xap/1.0/";
 pub const EXIF: &str = "http://ns.adobe.com/exif/1.0/";
 
+/// make_item!(EXIF, "DateTimeOriginal")
+/// expands to
+/// pub const EXIF_DATETIMEORIGINAL: XmpItem = XmpItem {
+///     name: "DateTimeOriginal",
+///     namespace: "http://ns.adobe.com/exif/1.0/",
+///     namespace_short: "exif",
+/// };
+#[macro_export]
 macro_rules! make_item {
     ($ns:expr, $item:expr) => {
         paste::paste! {
@@ -32,22 +54,6 @@ make_item!(TIFF, "Orientation");
 make_item!(XMP, "CreateDate");
 make_item!(XMP, "Rating");
 make_item!(XMP, "Label");
-// General namespaces used in xmp
-// xmlns:xmp="http://ns.adobe.com/xap/1.0/"
-// xmlns:crd="http://ns.adobe.com/camera-raw-defaults/1.0/"
-// xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/"
-// xmlns:stCamera="http://ns.adobe.com/photoshop/1.0/camera-profile"
-// xmlns:crlcp="http://ns.adobe.com/camera-raw-embedded-lens-profile/1.0/"
-// xmlns:tiff="http://ns.adobe.com/tiff/1.0/"
-// xmlns:exif="http://ns.adobe.com/exif/1.0/"
-// xmlns:aux="http://ns.adobe.com/exif/1.0/aux/"
-// xmlns:exifEX="http://cipa.jp/exif/1.0/"
-// xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
-// xmlns:stEvt="http://ns.adobe.com/xap/1.0/sType/ResourceEvent#"
-// xmlns:dc="http://purl.org/dc/elements/1.1/"
-// xmlns:xmpRights="http://ns.adobe.com/xap/1.0/rights/"
-// xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
-// xmlns:Iptc4xmpCore="http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/"
 
 const XMP_EXT: [&str; 1] = ["xmp"];
 const RAW_EXT: [&str; 37] = [
