@@ -20,6 +20,7 @@ img-parts = { version = "0.2.3", optional = true }
 jfifdump = { git = "https://github.com/aftershootco/jfifdump" , optional = true }
 libraw_r = { git = "https://github.com/aftershootco/libraw-rs", default-features = false, optional = true }
 iso8601 = "0.4.2"
+paste = "1.0.7"
 
 [features]
 jpeg = ["dep:jfifdump", "dep:kamadak-exif", "dep:img-parts"]

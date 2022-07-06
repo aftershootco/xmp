@@ -15,6 +15,23 @@ pub const LR: &str = "http://ns.adobe.com/lightroom/1.0/";
 pub const XMP: &str = "http://ns.adobe.com/xap/1.0/";
 pub const EXIF: &str = "http://ns.adobe.com/exif/1.0/";
 
+macro_rules! make_item {
+    ($ns:expr, $item:expr) => {
+        paste::paste! {
+            pub const [<$ns:upper _ $item:upper>]: XmpItem = XmpItem {
+                name: $item,
+                namespace: $ns,
+                namespace_short: stringify!([<$ns:lower>]),
+            };
+        }
+    };
+}
+
+make_item!(EXIF, "DateTimeOriginal");
+make_item!(TIFF, "Orientation");
+make_item!(XMP, "CreateDate");
+make_item!(XMP, "Rating");
+make_item!(XMP, "Label");
 // General namespaces used in xmp
 // xmlns:xmp="http://ns.adobe.com/xap/1.0/"
 // xmlns:crd="http://ns.adobe.com/camera-raw-defaults/1.0/"
@@ -42,6 +59,24 @@ const JPG_EXT: [&str; 4] = ["jpg", "jpeg", "avif", "hif"];
 const PNG_EXT: [&str; 1] = ["png"];
 const HEIF_EXT: [&str; 2] = ["heic", "heif"];
 const TIFF_EXT: [&str; 2] = ["tiff", "tif"];
+
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+pub struct XmpItem<'xmp> {
+    pub name: &'xmp str,
+    pub namespace: &'xmp str,
+    pub namespace_short: &'xmp str,
+}
+
+// pub type XmpItems = IntoIterator<Target = XmpItem>;
+
+impl XmpItem<'_> {
+    pub fn attr_name(&self) -> String {
+        [self.namespace_short, self.name].join(":")
+    }
+    pub fn child_name(&self) -> &str {
+        self.name
+    }
+}
 
 #[macro_use]
 extern crate derive_builder;
@@ -268,6 +303,7 @@ impl UpdateResults {
             .and_then(|rdf| rdf.get_child("Description", RDF))
             .otor(|| XmpErrorKind::ChildNotFound)?;
 
+        // dbg!(try_get_item(description, EXIF_DATETIMEORIGINAL));
 
         let mut results_builder = UpdateResultsBuilder::default();
         results_builder.colors(None);
@@ -278,15 +314,15 @@ impl UpdateResults {
         results_builder.orientation(None);
         results_builder.offset(None);
 
-        if let Some(v) = description.get_child("DateTimeOriginal", EXIF) {
+        if let Ok(v) = try_get_item(description, EXIF_DATETIMEORIGINAL) {
             // results_builder.datetime(crate::time::timestamp(&v.text()));
-            let t = crate::time::timestamp_offset(&v.text());
+            let t = crate::time::timestamp_offset(&v);
 
             results_builder.datetime(t.map(|d| d.0));
             results_builder.offset(t.and_then(|d| d.1));
         }
-        if let Some(v) = description.get_child("CreateDate", XMP) {
-            let datetime = crate::time::timestamp_offset(v.text());
+        if let Ok(v) = try_get_item(description, XMP_CREATEDATE) {
+            let datetime = crate::time::timestamp_offset(&v);
             if datetime.is_some()
                 && results_builder
                     .datetime
@@ -297,36 +333,16 @@ impl UpdateResults {
                 results_builder.offset(datetime.and_then(|d| d.1));
             }
         }
-        description.attrs().for_each(|attr| match attr {
-            ("xmp:Label", v) => {
-                results_builder.colors(Some(v.to_owned()));
-            }
-            ("xmp:Rating", v) => {
-                results_builder.stars(v.parse().ok());
-            }
-            ("xmp:CreateDate", v) => {
-                let datetime = crate::time::timestamp_offset(v);
-                if datetime.is_some()
-                    && results_builder
-                        .datetime
-                        .map(|d| d.is_none())
-                        .unwrap_or(false)
-                {
-                    results_builder.datetime(datetime.map(|d| d.0));
-                    results_builder.offset(datetime.and_then(|d| d.1));
-                }
-            }
-            ("exif:DateTimeOriginal", v) => {
-                if let Some(datetime) = crate::time::timestamp_offset(v) {
-                    results_builder.datetime(Some(datetime.0));
-                    results_builder.offset(datetime.1);
-                }
-            }
-            ("tiff:Orientation", v) => {
-                results_builder.orientation(v.parse().ok());
-            }
-            _ => (),
-        });
+        if let Ok(v) = try_get_item(description, XMP_RATING) {
+            results_builder.stars(v.parse().ok());
+        }
+        if let Ok(v) = try_get_item(description, XMP_LABEL) {
+            results_builder.colors(Some(v));
+        }
+
+        if let Ok(v) = try_get_item(description, TIFF_ORIENTATION) {
+            results_builder.orientation(v.parse().ok());
+        }
         let subjects = description
             .get_child("subject", DC)
             .and_then(|subject| subject.get_child("Bag", RDF))
@@ -461,4 +477,17 @@ where
         },
     };
     Ok(xmpmeta)
+}
+
+pub fn try_get_item(element: &Element, item: XmpItem) -> Result<String, XmpError> {
+    if let Some(s) = element.attr(&item.attr_name()) {
+        Ok(s.to_owned())
+    } else if let Some(e) = element.get_child(item.name, item.namespace) {
+        Ok(e.text())
+    } else {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("Failed to get Item {}", item.attr_name()),
+        ))?
+    }
 }
