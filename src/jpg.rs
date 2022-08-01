@@ -5,6 +5,8 @@ use jfifdump::{Reader, SegmentKind};
 use std::io::BufReader;
 use std::io::Cursor;
 
+const EXIF_DATA_PREFIX: &[u8; 6] = b"Exif\0\0";
+
 pub(crate) fn __jpeg_load_xml(path: impl AsRef<Path>) -> Result<Vec<u8>, XmpError> {
     // First open a buffered reader
     // Check if the file has a exif header or a jfif header
@@ -39,6 +41,25 @@ pub(crate) fn __jpeg_load_xml(path: impl AsRef<Path>) -> Result<Vec<u8>, XmpErro
     }
 
     Err(XmpErrorKind::XMPMissing.into())
+}
+
+pub fn set_exif(jpeg: &mut img_parts::jpeg::Jpeg, exif: impl AsRef<[u8]>) {
+    use bytes::BufMut;
+    let exif_data = exif.as_ref();
+    // jpeg.set_exif(Some(exif_data.into()));
+    jpeg.segments_mut().retain(|segment| {
+        !(segment.marker() == img_parts::jpeg::markers::APP1
+            && segment.contents().starts_with(EXIF_DATA_PREFIX))
+    });
+    let mut contents = bytes::BytesMut::with_capacity(EXIF_DATA_PREFIX.len() + exif_data.len());
+    contents.put(EXIF_DATA_PREFIX.as_slice());
+    contents.put(exif_data);
+
+    let segment = img_parts::jpeg::JpegSegment::new_with_contents(
+        img_parts::jpeg::markers::APP1,
+        contents.freeze(),
+    );
+    jpeg.segments_mut().insert(0, segment);
 }
 
 impl UpdateResults {
@@ -91,7 +112,11 @@ impl UpdateResults {
 
         let exif_data = exif_data.into_inner();
         jpeg.remove_segments_by_marker(0xE0);
-        jpeg.set_exif(Some(exif_data.into()));
+        // NOTE: The default set_exif inserts the exif header at the 3rd jpeg segment
+        // While it should be in the first segment for our case
+        // jpeg.set_exif(Some(exif_data.into()));
+        //
+        set_exif(&mut jpeg, exif_data);
 
         let temp = path.as_ref().with_extension("temp");
         let mut bfw = BufWriter::new(std::fs::File::create(&temp)?);

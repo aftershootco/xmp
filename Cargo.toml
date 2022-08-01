@@ -1,6 +1,6 @@
 [package]
 name = "xmp"
-version = "0.9.3"
+version = "0.9.4"
 edition = "2021"
 
 
@@ -19,8 +19,9 @@ kamadak-exif = { version = "0.5.4", optional = true }
 img-parts = { version = "0.2.3", optional = true }
 jfifdump = { git = "https://github.com/aftershootco/jfifdump" , optional = true }
 libraw_r = { git = "https://github.com/aftershootco/libraw-rs", optional = true }
-iso8601 = "0.4.2"
+iso8601 = "0.5.0"
 paste = "1.0.7"
+bytes = "0.5.3"
 
 [features]
 jpeg = ["dep:jfifdump", "dep:kamadak-exif", "dep:img-parts"]
@@ -38,3 +39,6 @@ harness = false
 [[bench]]
 name = "write"
 harness = false
+
+# [patch.crates-io]
+# img-parts = { path = "../img-parts" }
