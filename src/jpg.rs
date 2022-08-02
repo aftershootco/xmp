@@ -12,7 +12,15 @@ pub(crate) fn __jpeg_load_xml(path: impl AsRef<Path>) -> Result<Vec<u8>, XmpErro
     // Check if the file has a exif header or a jfif header
     // Its possible for files to have a exif header while also having a jfif header
     // So check for the exif header first
-    let jpeg = img_parts::jpeg::Jpeg::from_bytes(std::fs::read(&path)?.into())?;
+    let mut jpeg = img_parts::jpeg::Jpeg::from_bytes(std::fs::read(&path)?.into())?;
+    // HACK:Put the Exif data in first position of jpeg segments
+    jpeg.segments_mut().sort_by(|seg1, _| {
+        if seg1.contents().starts_with(EXIF_DATA_PREFIX) {
+            std::cmp::Ordering::Less
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    });
     if let Some(exif_data) = jpeg.exif() {
         let exifreader = exif::Reader::new();
         let exif = exifreader.read_raw(exif_data.to_vec())?;
