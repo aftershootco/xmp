@@ -28,6 +28,7 @@ pub const TIFF: &str = "http://ns.adobe.com/tiff/1.0/";
 pub const LR: &str = "http://ns.adobe.com/lightroom/1.0/";
 pub const XMP: &str = "http://ns.adobe.com/xap/1.0/";
 pub const EXIF: &str = "http://ns.adobe.com/exif/1.0/";
+pub const PHOTOSHOP: &str = "http://ns.adobe.com/photoshop/1.0/";
 
 /// make_item!(EXIF, "DateTimeOriginal")
 /// expands to
@@ -54,6 +55,7 @@ make_item!(TIFF, "Orientation");
 make_item!(XMP, "CreateDate");
 make_item!(XMP, "Rating");
 make_item!(XMP, "Label");
+make_item!(PHOTOSHOP, "SidecarForExtension");
 
 const XMP_EXT: [&str; 1] = ["xmp"];
 const RAW_EXT: [&str; 37] = [
@@ -169,6 +171,7 @@ pub struct UpdateResults {
     pub orientation: Option<usize>,
     /// Should be +-seconds based on whether the offset was specified
     pub offset: Option<i64>,
+    pub sidecar_for_extension: Option<String>,
 }
 
 impl UpdateResults {
@@ -317,6 +320,7 @@ impl UpdateResults {
         results_builder.hierarchies(None);
         results_builder.orientation(None);
         results_builder.offset(None);
+        results_builder.sidecar_for_extension(None);
 
         if let Ok(v) = try_get_item(description, EXIF_DATETIMEORIGINAL) {
             // results_builder.datetime(crate::time::timestamp(&v.text()));
@@ -325,6 +329,11 @@ impl UpdateResults {
             results_builder.datetime(t.map(|d| d.0));
             results_builder.offset(t.and_then(|d| d.1));
         }
+
+        if let Ok(v) = try_get_item(description, PHOTOSHOP_SIDECARFOREXTENSION) {
+            results_builder.sidecar_for_extension(Some(v));
+        }
+
         if let Ok(v) = try_get_item(description, XMP_CREATEDATE) {
             let datetime = crate::time::timestamp_offset(&v);
             if datetime.is_some()
@@ -415,10 +424,22 @@ impl OptionalResults {
             ImageType::Png => OptionalResults::load_png(path),
             ImageType::Raw => {
                 if let Some(path) = exists_with_extension(&path, "xmp") {
-                    OptionalResults::load_xmp(path)
-                } else {
-                    OptionalResults::load_raw(path)
+                    let xmp = OptionalResults::load_xmp(&path);
+                    if let Ok(UpdateResults {
+                        sidecar_for_extension: Some(ref sidecar_for_extension),
+                        ..
+                    }) = xmp
+                    {
+                        if let Some(ext) = &path.extension().and_then(OsStr::to_str) {
+                            if sidecar_for_extension.eq_ignore_ascii_case(ext) {
+                                return xmp;
+                            }
+                        }
+                    } else {
+                        return xmp;
+                    }
                 }
+                OptionalResults::load_raw(path)
             }
             _ => Err(XmpError::from(XmpErrorKind::InvalidFileType)),
         }
