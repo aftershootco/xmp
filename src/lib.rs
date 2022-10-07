@@ -423,6 +423,7 @@ impl OptionalResults {
             ImageType::Jpg => OptionalResults::load_jpg(path),
             ImageType::Png => OptionalResults::load_png(path),
             ImageType::Raw => {
+                let raw_ext = path.as_ref().extension().and_then(OsStr::to_str);
                 if let Some(path) = exists_with_extension(&path, "xmp") {
                     let xmp = OptionalResults::load_xmp(&path);
                     if let Ok(UpdateResults {
@@ -430,7 +431,7 @@ impl OptionalResults {
                         ..
                     }) = xmp
                     {
-                        if let Some(ext) = &path.extension().and_then(OsStr::to_str) {
+                        if let Some(ext) = raw_ext {
                             if sidecar_for_extension.eq_ignore_ascii_case(ext) {
                                 return xmp;
                             }
