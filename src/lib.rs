@@ -98,6 +98,8 @@ mod raw;
 #[cfg(feature = "png")]
 mod png;
 
+mod orientation;
+
 pub mod time;
 mod xml;
 
@@ -160,7 +162,7 @@ pub struct UpdateOptions {
     overwrite: bool,
 }
 
-#[derive(Debug, Default, Builder, PartialEq)]
+#[derive(Debug, Default, Builder, PartialEq, Eq)]
 pub struct UpdateResults {
     pub stars: Option<u8>,
     pub colors: Option<String>,

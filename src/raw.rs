@@ -7,7 +7,7 @@ pub(crate) fn __raw_load_xml(path: impl AsRef<Path>) -> Result<Vec<u8>, XmpError
         Vec::<u8>::new(),
         libraw_r::exif::DataStreamType::File,
         |container, tag, _, _, _, data, _| {
-            if tag ==  0x02bc {
+            if tag == 0x02bc {
                 container.extend_from_slice(data);
             }
             Ok(())

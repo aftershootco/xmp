@@ -68,6 +68,7 @@ pub fn missing_namespace() {
         datetime: Some(1651333056),
         orientation: Some(1),
         offset: Some(-4 * 3600),
+        sidecar_for_extension: Some("NEF".into()),
         ..Default::default()
     };
     let r = OptionalResults::load("assets/missing_ns.xmp").unwrap();
