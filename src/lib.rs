@@ -193,8 +193,13 @@ impl UpdateResults {
         if let Some(stars) = self.stars {
             description.set_attr("xmp:Rating", stars)
         }
+
         if let Some(colors) = &self.colors {
             description.set_attr("xmp:Label", colors)
+        }
+
+        if let Some(orientation) = &self.orientation {
+            description.set_attr("tiff:Orientation", orientation.to_string())
         }
 
         if let Some(datetime) = self.datetime {
