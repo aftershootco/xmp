@@ -199,7 +199,7 @@ pub fn test_jpeg_exif_load_updated() {
                 .map(ToString::to_string)
                 .collect(),
         ),
-        orientation: None,
+        orientation: Some(1),
         hierarchies: Some(vec!["Duplicates"].iter().map(ToString::to_string).collect()),
         offset: None,
         ..Default::default()

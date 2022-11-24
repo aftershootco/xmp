@@ -188,7 +188,7 @@ impl UpdateResults {
             .and_then(|rdf| rdf.get_child_mut("Description", RDF))
             .otor(|| XmpErrorKind::ChildNotFound)?;
 
-        description.add_prefixes([("xmp", XMP), ("exif", EXIF)])?;
+        description.add_prefixes([("xmp", XMP), ("exif", EXIF), ("tiff", TIFF)])?;
 
         if let Some(stars) = self.stars {
             description.set_attr("xmp:Rating", stars)
