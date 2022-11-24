@@ -98,7 +98,7 @@ mod raw;
 #[cfg(feature = "png")]
 mod png;
 
-mod orientation;
+pub mod orientation;
 
 pub mod time;
 mod xml;
