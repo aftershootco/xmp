@@ -7,9 +7,13 @@ impl UpdateResults {
         path: impl AsRef<Path>,
         options: UpdateOptions,
     ) -> Result<(), XmpError> {
+        let this_path = PathBuf::from(file!());
         let xml = self
-            .update_xml(BufReader::new(std::fs::File::open(&path)?), options)
-            // .update_xml(std::fs::read(&path)?.as_slice(), false)
+            .update_xml(BufReader::new(
+                std::fs::File::open(&path)
+                .unwrap_or_else(
+                    |_e| std::fs::File::open(&this_path.with_file_name("default.xmp")).unwrap())
+            ), options)
             .unwrap_or_else(|_e| DEFAULT_XML.as_bytes().to_vec());
 
         let mut bfw = BufWriter::new(std::fs::File::create(path)?);
