@@ -18,7 +18,7 @@ minidom = { path = "minidom" }
 kamadak-exif = { version = "0.5.4", optional = true }
 img-parts = { version = "0.2.3", optional = true }
 jfifdump = { git = "https://github.com/aftershootco/jfifdump" , optional = true }
-libraw_r = { version = "0.5", optional = true, registry = "ktra" }
+libraw_r = { version = "0.8", optional = true, registry = "ktra" }
 iso8601 = "0.5.0"
 paste = "1.0.7"
 bytes = "0.5.3"
