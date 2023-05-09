@@ -6,15 +6,15 @@ pub(crate) fn __raw_load_xml(path: impl AsRef<Path>) -> Result<Vec<u8>, XmpError
     let exif = processor.set_exif_callback(
         Vec::<u8>::new(),
         libraw_r::exif::DataStreamType::File,
-        |container, tag, _, _, _, data, _| {
-            if tag ==  0x02bc {
-                container.extend_from_slice(data);
+        |args| {
+            if args.tag == 0x02bc {
+                args.callback_data.extend_from_slice(args.data);
             }
             Ok(())
         },
     )?;
     processor.open(path)?;
-    let xmp = exif.data(&mut processor)?;
+    let xmp = exif.data()?;
     if !xmp.is_empty() {
         return Ok(xmp);
     }
