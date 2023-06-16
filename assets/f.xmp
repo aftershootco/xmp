@@ -1,18 +1,18 @@
-<x:xmpmeta xmlns:x="adobe:ns:meta/">
-    <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:lr="http://ns.adobe.com/lightroom/1.0/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:xmp="http://ns.adobe.com/xap/1.0/">
-        <rdf:Description xmlns:exif="http://ns.adobe.com/exif/1.0/" xmlns:tiff="http://ns.adobe.com/tiff/1.0/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmp:Label="Blue" xmp:Rating="4">
-            <dc:subject>
-                <rdf:Bag>
-                    <rdf:li>AAAAA</rdf:li>
-                    <rdf:li>World</rdf:li>
-                </rdf:Bag>
-            </dc:subject>
-            <lr:hierarchicalSubject>
-                <rdf:Bag>
-                    <rdf:li>Some</rdf:li>
-                    <rdf:li>stuff</rdf:li>
-                </rdf:Bag>
-            </lr:hierarchicalSubject>
-        </rdf:Description>
+<x:xmpmeta xmlns:x='adobe:ns:meta/'>
+    <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#' xmlns:lr='http://ns.adobe.com/lightroom/1.0/' xmlns:dc='http://purl.org/dc/elements/1.1/' xmlns:xmp='http://ns.adobe.com/xap/1.0/'>
+        <Description xmlns='http://www.w3.org/1999/02/22-rdf-syntax-ns#' xmlns:exif='http://ns.adobe.com/exif/1.0/' xmlns:tiff='http://ns.adobe.com/tiff/1.0/' xmlns:xmp='http://ns.adobe.com/xap/1.0/' xmp:Label="Blue" xmp:Rating="4">
+            <subject xmlns='http://purl.org/dc/elements/1.1/'>
+                <Bag xmlns='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+                    <li>AAAAA</li>
+                    <li>World</li>
+                </Bag>
+            </subject>
+            <hierarchicalSubject xmlns='http://ns.adobe.com/lightroom/1.0/'>
+                <Bag xmlns='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+                    <li>Some</li>
+                    <li>stuff</li>
+                </Bag>
+            </hierarchicalSubject>
+        </Description>
     </rdf:RDF>
 </x:xmpmeta>

@@ -158,7 +158,6 @@ impl ImageType {
 
 #[derive(Debug, Clone, Default)]
 pub struct UpdateOptions {
-    indent: Option<(u8, usize)>,
     overwrite: bool,
 }
 
@@ -188,7 +187,8 @@ impl UpdateResults {
             .and_then(|rdf| rdf.get_child_mut("Description", RDF))
             .otor(|| XmpErrorKind::ChildNotFound)?;
 
-        description.add_prefixes([("xmp", XMP), ("exif", EXIF), ("tiff", TIFF)])?;
+        // description.add_prefixes([("xmp", XMP), ("exif", EXIF), ("tiff", TIFF)])?;
+        dbg!(&description.prefixes);
 
         if let Some(stars) = self.stars {
             description.set_attr("xmp:Rating", stars)
@@ -205,14 +205,16 @@ impl UpdateResults {
         if let Some(datetime) = self.datetime {
             let offset = if let Some(offset) = self.offset {
                 chrono::FixedOffset::east_opt(offset as i32)
-                    .unwrap_or_else(|| chrono::FixedOffset::east(0))
+                    .unwrap_or_else(|| chrono::FixedOffset::east_opt(0).expect("Should not happen"))
             } else {
-                chrono::FixedOffset::east(0)
+                chrono::FixedOffset::east_opt(0).expect("Should not happen")
             };
 
-            let datetime =
-                DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(datetime, 0), Utc)
-                    .with_timezone(&offset);
+            let datetime = DateTime::<Utc>::from_utc(
+                NaiveDateTime::from_timestamp_opt(datetime, 0).expect("Should not happen"),
+                Utc,
+            )
+            .with_timezone(&offset);
 
             if description.has_child("DateTimeOriginal", EXIF) {
                 description.remove_child("DateTimeOriginal", EXIF);
@@ -298,12 +300,7 @@ impl UpdateResults {
         }
 
         let mut xml = Vec::new();
-        if let Some(indent) = options.indent {
-            let mut qwriter = quick_xml::Writer::new_with_indent(&mut xml, indent.0, indent.1);
-            xmpmeta.to_writer(&mut qwriter)?;
-        } else {
-            xmpmeta.write_to(&mut xml)?;
-        }
+        xmpmeta.write_to(&mut xml)?;
         Ok(xml)
     }
 
@@ -331,7 +328,7 @@ impl UpdateResults {
 
         if let Ok(v) = try_get_item(description, EXIF_DATETIMEORIGINAL) {
             // results_builder.datetime(crate::time::timestamp(&v.text()));
-            let t = crate::time::timestamp_offset(&v);
+            let t = crate::time::timestamp_offset(v);
 
             results_builder.datetime(t.map(|d| d.0));
             results_builder.offset(t.and_then(|d| d.1));
@@ -342,7 +339,7 @@ impl UpdateResults {
         }
 
         if let Ok(v) = try_get_item(description, XMP_CREATEDATE) {
-            let datetime = crate::time::timestamp_offset(&v);
+            let datetime = crate::time::timestamp_offset(v);
             if datetime.is_some()
                 && results_builder
                     .datetime
@@ -432,7 +429,7 @@ impl OptionalResults {
             ImageType::Raw => {
                 let raw_ext = path.as_ref().extension().and_then(OsStr::to_str);
                 if let Some(path) = exists_with_extension(&path, "xmp") {
-                    let xmp = OptionalResults::load_xmp(&path);
+                    let xmp = OptionalResults::load_xmp(path);
                     if let Ok(UpdateResults {
                         sidecar_for_extension: Some(ref sidecar_for_extension),
                         ..
@@ -467,15 +464,14 @@ fn add_ns(ns: &str, buffer: impl BufRead) -> Result<Vec<u8>, XmpError> {
     let mut writer = quick_xml::Writer::new(Vec::new());
     let mut buf = Vec::new();
     loop {
-        match reader.read_event(&mut buf) {
-            Ok(Event::Start(ref e)) if e.name() == b"rdf:Description" => {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(ref e)) if e.name() == quick_xml::name::QName(b"rdf:Description") => {
                 let mut elem = e.clone();
                 elem.clear_attributes();
                 elem.extend_attributes(
                     e.attributes()
                         .map(|a| a.unwrap())
-                        .filter(|a| a.key != b"xmlns:dc")
-                        .into_iter(),
+                        .filter(|a| a.key != quick_xml::name::QName(b"xmlns:dc")),
                 );
                 elem.push_attribute(("xmlns:dc", ns));
                 writer.write_event(Event::Start(elem))?
@@ -493,9 +489,8 @@ pub fn try_load_element<R>(mut reader: R) -> Result<minidom::Element, XmpError>
 where
     R: Read + Seek,
 {
-    let bfr = BufReader::new(&mut reader);
-    let mut q_reader = quick_xml::Reader::from_reader(bfr);
-    let xmpmeta: Element = match Element::from_reader(&mut q_reader) {
+    let mut bfr = BufReader::new(&mut reader);
+    let xmpmeta: Element = match Element::from_reader(&mut bfr) {
         Ok(xmp) => xmp,
         Err(e) => match e {
             minidom::Error::MissingNamespace => {
@@ -503,8 +498,8 @@ where
                 let mut bfr = BufReader::new(&mut reader);
                 bfr.seek(SeekFrom::Start(0))?;
                 let buffer = add_ns(DC, &mut bfr)?;
-                let mut reader = quick_xml::Reader::from_reader(buffer.as_slice());
-                Element::from_reader(&mut reader)?
+                let mut cursor = std::io::Cursor::new(buffer);
+                Element::from_reader(&mut cursor)?
             }
             _ => return Err(e.into()),
         },

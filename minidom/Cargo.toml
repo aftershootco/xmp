@@ -1,6 +1,6 @@
 [package]
 name = "minidom"
-version = "0.14.0"
+version = "0.15.2"
 authors = [
   "lumi <lumi@pew.im>",
   "Emmanuel Gil Peyrot <linkmauve@linkmauve.fr>",
@@ -8,7 +8,7 @@ authors = [
   "Astro <astro@spaceboyz.net>",
   "Maxime “pep” Buquet <pep@bouah.net>",
 ]
-description = "A small, simple DOM implementation on top of quick-xml, targeting the subset of XML useful for XMPP"
+description = "A small, simple DOM implementation on top of rxml, targeting the subset of XML useful for XMPP"
 homepage = "https://gitlab.com/xmpp-rs/xmpp-rs"
 repository = "https://gitlab.com/xmpp-rs/xmpp-rs"
 documentation = "https://docs.rs/minidom"
@@ -16,9 +16,10 @@ readme = "README.md"
 keywords = ["xml", "xmpp"]
 license = "MPL-2.0"
 edition = "2018"
+publish = ["ktra"]
 
 [badges]
 gitlab = { repository = "xmpp-rs/xmpp-rs" }
 
 [dependencies]
-quick-xml = "0.22.0"
+rxml = { version = "0.9.1", default-features = false, features = ["mt"] }

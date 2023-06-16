@@ -10,7 +10,7 @@
 
 #![deny(missing_docs)]
 
-//! A minimal DOM crate built on top of quick-xml, targeting exclusively the subset of XML useful
+//! A minimal DOM crate built on top of rxml, targeting exclusively the subset of XML useful
 //! for XMPP.
 //!
 //! This library exports an `Element` struct which represents a DOM tree.
@@ -19,7 +19,7 @@
 //!
 //! Run with `cargo run --example articles`. Located in `examples/articles.rs`.
 //!
-//! ```rust,ignore
+//! ```rust
 //! extern crate minidom;
 //!
 //! use minidom::Element;
@@ -75,14 +75,13 @@
 //! minidom = "*"
 //! ```
 
-pub use quick_xml;
-
 pub mod convert;
 pub mod element;
 pub mod error;
 mod namespaces;
 pub mod node;
 mod prefixes;
+pub mod tree_builder;
 
 #[cfg(test)]
 mod tests;

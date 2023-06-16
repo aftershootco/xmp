@@ -51,11 +51,10 @@ impl PrefixNS for minidom::Element {
         for (prefix, value) in sets {
             // self.prefixes.get(&Some(prefix.clone()));
             if let Some(value) = value.into_attribute_value() {
-                self.prefixes.insert(Some(prefix), value);
-            } else {
-                // unimplemented!()
+                self.prefixes.insert(Some(dbg!(prefix)), dbg!(value));
             }
         }
+        dbg!(&self.prefixes);
         Ok(())
     }
 }

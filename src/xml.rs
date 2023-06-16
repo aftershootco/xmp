@@ -50,14 +50,8 @@ pub fn set_subjects() {
         hierarchies: Some(vec!["Some".to_owned(), "stuff".to_owned()]),
         ..Default::default()
     };
-    x.write_to_with_options(
-        "assets/f.xmp",
-        UpdateOptions {
-            indent: Some((b' ', 4)),
-            overwrite: false,
-        },
-    )
-    .unwrap();
+    x.write_to_with_options("assets/f.xmp", UpdateOptions { overwrite: false })
+        .unwrap();
     println!("{:?}", OptionalResults::load("assets/f.xmp").unwrap());
 }
 
